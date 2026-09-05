@@ -1,158 +1,128 @@
-# Aeris AAIR Air Purifier Firmware (Particle Photon)
+# Aeris aair firmware, tyclab flavour
 
-Firmware for an Aeris AAIR air purifier retrofit running on a `Particle Photon`.
+Cloud-free firmware for the Particle Photon inside an Aeris aair 3-in-1 (Pro)
+air purifier. Local web API, MQTT, Home Assistant friendly, and a restyled
+panel: the tycstation squid is the fan gauge.
 
-## Inspiration
+This is a fork of [CliffLin/aeris-aair-air-purifier](https://github.com/CliffLin/aeris-aair-air-purifier),
+which in turn builds on [mjaymeyer/aeris-aair-home-assistant](https://github.com/mjaymeyer/aeris-aair-home-assistant).
+The control core, web API and MQTT namespace are theirs; the generic fixes
+below are offered back upstream as pull requests. Licence stays GPL-3.
 
-This project is inspired by:
-- https://github.com/mjaymeyer/aeris-aair-home-assistant
+## What this flavour changes
 
-In particular, the PM/AQI value reading direction and integration approach were informed by that project.
+Panel
 
-## What This Firmware Includes
+- The squid mark is the fan gauge: the head is always lit, the eight tentacles
+  light left to right with fan speed, the rest stay grey.
+- PM2.5 and PM10 values are coloured by European AQI band, blue (good) through
+  purple to red (very poor).
+- Theme is the mark's gradient stops: `#5aa2ff`, `#8b6cf0`, `#ff4a3d`.
+- Wi-Fi icon mid-left, blue when connected, red when not.
+- The stock panel is wired BGR; the driver sets MADCTL accordingly instead of
+  compensating every colour.
+- No boot animation. The panel goes straight to the live screen.
 
-- Fan control via PWM
-- PM2.5 / PM10 sensor parsing over `Serial1`
-- Local web configuration/API (`/api/v2/...`)
-- MQTT command/state interface (`aeris/v2/<device_id>/...`)
-- SoftAP setup flow for Wi-Fi onboarding
+Board
 
-## Feature Set (v1.0.0)
+- Key-light driver for the shift register behind the four buttons: pattern,
+  five brightness levels (software PWM), blink. See `docs/hardware-components-and-interfaces.md`
+  section 6 for the first-party teardown of the EC_UI board.
+- Filter lifetime as a persisted wall-clock countdown, published in minutes,
+  settable in days.
+- Serial provisioning line for headless setup (no SoftAP dance).
+- Publish queue sized for a full state burst; the old size silently dropped
+  one topic per cycle.
 
-Public release tag is `v1.0.0`; interface namespace in firmware is currently `v2`.
+Interfaces added on top of upstream v2 (`aeris/v2/<device_id>/...`, see
+`docs/interfaces.md`):
 
-### Control and On-Device UX
+| Command topic         | Payload                   | State topic             |
+| --------------------- | ------------------------- | ----------------------- |
+| `cmd/ring`            | pattern byte `0..255`     | `state/ring`            |
+| `cmd/ring_brightness` | `0..4`                    | `state/ring_brightness` |
+| `cmd/ring_blink`      | half period ms, `0` solid | `state/ring_blink`      |
+| `cmd/status_led`      | `0` or `1`                | `state/status_led`      |
+| `cmd/filter_days`     | days remaining            | `sensor/filter_minutes` |
 
-- Fan speed control from `0..100%` with PWM output on `D0`.
-- Power toggle with saved-speed restore when turning back on.
-- Panel light toggle and dedicated screen backlight (`screen_light`) control.
-Physical button behavior:
-- `D1`: short press fan `+5%`
-- `D2`: short press fan `-5%`
-- `D3`: short press toggle lights
-- `D3`: long press `>=5s` toggle Wi-Fi enable/disable
-- `D4`: short press toggle power
-- `D4`: long press `>=8s` clear Wi-Fi credentials and reboot
-- TFT runtime UI for fan/PM values and Wi-Fi status.
-- Setup-mode TFT UI shows SoftAP SSID and setup target IP.
+Pattern bits: `0x03` power, `0x0C` AirQ, `0x30` down, `0xC0` up.
 
-### Sensor and Data Pipeline
+## Hardware notes
 
-- PM data ingest from `Serial1` at `9600`.
-- 32-byte sensor frame parsing with header and checksum validation.
-- PM2.5 and PM10 extraction and periodic smoothing before publish/display.
-- Sensor watchdog wake sequence when the stream is stale.
-
-### Wi-Fi and Provisioning
-
-- Auto setup-mode (SoftAP) boot when no valid Wi-Fi SSID is stored.
-- SoftAP SSID format `Aeris-XXXX`.
-- SoftAP setup page flow at `192.168.0.1` for Wi-Fi credential submission.
-- Reboot after setup submit to apply new Wi-Fi configuration.
-- Wi-Fi can be disabled/enabled without erasing credentials (`D3` long press).
-
-### Exposed Interfaces
-
-- Local Web UI at `GET /`.
-- Settings API: `GET /api/v2/settings`, `POST /api/v2/settings`.
-- State API: `GET /api/v2/state`.
-- Control API: `POST /api/v2/control` (`fan_percent`, `lights`, `screen_light`).
-- System API: `POST /api/v2/system/reboot`, `POST /api/v2/system/dfu`.
-MQTT command topics:
-- `aeris/v2/<device_id>/cmd/fan_percent`
-- `aeris/v2/<device_id>/cmd/lights`
-- `aeris/v2/<device_id>/cmd/screen_light`
-- MQTT state/health topics for fan, PM, uptime, reconnect counters, parse errors, queue drop counters.
-
-### Reliability and Diagnostics
-
-- EEPROM `SettingsV2` with validation (`magic/version/length/CRC32`), sanitize, and defaults fallback.
-- Command queueing with per-source drop counters (button/MQTT/web).
-- MQTT reconnect backoff and publish-drop tracking.
-- Health telemetry includes uptime and reconnect/error counters.
-
-See also:
-- `CHANGELOG.md` (`v1.0.0` release notes)
-- `docs/architecture.md`
-- `docs/interfaces.md`
-- `docs/hardware-components-and-interfaces.md`
+- Stock units ship bootloader v7. Device OS 2.3.1 needs v1003 or newer and
+  DFU cannot write the bootloader sector. Update it once over the listening
+  mode serial console (`f` command, YMODEM) with `photon-bootloader@2.3.1+lto.bin`
+  from the Device OS release, then flash `system-part1`, `system-part2` and
+  this application over DFU.
+- The panel is a 320x240 ST7789 behind a portrait oval aperture that clips the
+  corners hard. Layout constants live at the top of `src/drivers/display_driver.cpp`;
+  the fan and PM positions are also runtime settings (`fan_x`, `fan_y`,
+  `fan_font_size`, `pm_x`, `pm_y`, `pm_font_size`, `*_color`).
+- The perimeter LED ring is a separate LED population no register bit
+  addresses. It stays dark under this firmware; mechanism unexplained.
 
 ## Build
 
-From the project root:
+Local Device OS build, no Particle account needed:
 
 ```bash
-make
+git clone --branch v2.3.1 https://github.com/particle-iot/device-os.git
+git -C device-os submodule update --init --recursive
+make -C device-os/modules/photon/user-part PLATFORM=photon APPDIR=$PWD COMPILE_LTO=n all
+# -> target/src.bin
 ```
 
-This runs:
+Needs `gcc-arm-none-eabi` 9.x on `PATH`. The Particle libraries are pinned as
+submodules under `lib/` (Adafruit_ST7735_RK 1.10.4 with GFX and BusIO, MQTT
+0.4.32), so clone with `--recurse-submodules`.
+
+## Flash
 
 ```bash
-particle compile photon --saveTo aerisFirmware.bin
+stty -F /dev/ttyACM0 14400            # 14400 baud open = enter DFU
+dfu-util -d 2b04:d006 -a 0 -s 0x080A0000:leave -D target/src.bin
 ```
+
+Flash map: `0x08020000` system-part1, `0x08060000` system-part2, `0x080A0000`
+application. Settings and the filter record live in emulated EEPROM and
+survive application flashes.
+
+## Provision
+
+In setup mode the application reads one line on USB serial:
+
+```
+PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>\n
+```
+
+It answers `PROV OK rebooting` or `PROV ERR <reason>`. `IP?` returns the
+current address. `tools/serial_provision.py` sends the line and retries.
+The SoftAP flow from upstream still works (`Aeris-XXXX`, `192.168.0.1`).
+
+## Regenerate the gauge
+
+```bash
+python3 tools/gen_gauge.py tools/squid.svg src/assets/gauge_logo.h 176
+```
+
+Renders the SVG once per path (needs `rsvg-convert`) to learn which pixel
+belongs to which tentacle and emits per-row RLE. Never hand-edit the header.
+
+## Buttons
+
+- Up: fan `+5%`. Down: fan `-5%`.
+- AirQ: short press toggles the key lights; hold 5 s toggles Wi-Fi.
+- Power: short press toggles the purifier; hold 8 s wipes Wi-Fi and reboots
+  into setup mode.
 
 ## Warnings
 
-- Back up your original firmware before flashing anything from this repo.
-- Keep your own recovery copy (binary dump + notes for your specific board revision).
-- Flashing custom firmware can brick your device, break expected behavior, or void warranty.
-- You are responsible for hardware safety, electrical safety, and local compliance.
-- DYOR (Do Your Own Research) before wiring, flashing, or deploying this on unattended hardware.
-
-## Flash with Particle USB DFU
-
-1. Connect the Photon with USB.
-2. Enter DFU mode (blinking yellow) from CLI:
-
-```bash
-particle usb dfu
-```
-
-Windows CLI example:
-
-```powershell
-particle.exe usb dfu
-```
-
-Alternative manual method: hold `SETUP`, tap `RESET`, keep holding `SETUP` until LED turns blinking yellow.
-3. Flash the firmware over USB.
-
-Windows example:
-
-```powershell
-particle flash --usb C:\dfu\aerisFirmware.bin
-```
-
-If your binary is in this repo root, you can also run:
-
-```bash
-particle flash --usb aerisFirmware.bin
-```
-
-## Button Functions
-
-Button mapping in this firmware:
-
-- `D1` (UP): short press `+5%` fan speed.
-- `D2` (DOWN): short press `-5%` fan speed.
-- `D3` (EXTRA): short press toggles panel lights; hold `>=5s` toggles Wi-Fi on/off.
-- `D4` (POWER): short press toggles purifier power; hold `>=8s` resets Wi-Fi settings and reboots into setup flow.
-
-## Wi-Fi Setup / Reset Flow (SoftAP)
-
-1. Hold the left-side reset button (`D4`) for at least `8` seconds.
-2. Device clears saved Wi-Fi credentials and reboots.
-3. On reboot, screen enters setup mode and shows SoftAP SSID (for example `Aeris-XXXX`) and target URL/IP (`192.168.0.1`).
-4. User connects phone/laptop to that SoftAP SSID.
-5. Open the shown URL/IP in browser and submit Wi-Fi credentials.
-6. Device reboots automatically and completes Wi-Fi setup.
-
-Tip: hold the lower function button (`D3`) for at least `5` seconds to disable/enable Wi-Fi without wiping credentials.
-
-## Web UI Screenshot
-
-![Web UI screenshot](docs/webui.png)
+Back up the stock firmware first (full 1 MiB flash dump over DFU) and keep
+it with your board revision notes. Never flash the bootloader over DFU or
+with a mismatched image; a wrong bootloader is unrecoverable without SWD.
+Custom firmware can brick the unit and voids the warranty. You are
+responsible for electrical safety and local compliance.
 
 ## License
 
-This project uses the license in `LICENSE`.
+GPL-3, see `LICENSE`.

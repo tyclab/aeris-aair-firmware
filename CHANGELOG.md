@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## [tyclab v1.1.0] - 2026-09-05
+
+First release of the tyclab flavour, forked from upstream v1.0.0.
+
+### Panel
+
+- Squid fan gauge: head always lit, eight tentacles light left to right with fan speed.
+- PM values coloured by European AQI band; theme from the tycstation mark.
+- Wi-Fi icon mid-left, blue connected / red not.
+- Panel driven BGR via MADCTL (stock wiring); colours now render as specified.
+- Boot animation removed; live screen at power-on.
+- Fan/PM defaults re-laid for the oval aperture (`fan_x/y` 228/104 size 4, `pm_x/y` 60/182 size 3).
+
+### Board and interfaces
+
+- Key-light shift-register driver: `cmd/ring`, `cmd/ring_brightness`, `cmd/ring_blink`, `cmd/status_led` with matching state topics.
+- Filter lifetime countdown persisted in EEPROM: `cmd/filter_days`, `sensor/filter_minutes`.
+- Serial provisioning line (`PROV\t...`, `IP?`) for headless setup; `tools/serial_provision.py`.
+- Publish queue sized for a full state burst (was dropping one topic per cycle).
+- First-party EC_UI board teardown in `docs/hardware-components-and-interfaces.md`.
+
+### Build
+
+- Local Device OS 2.3.1 build documented; Particle libraries pinned as submodules under `lib/`.
+- `tools/gen_gauge.py` regenerates the gauge asset from `tools/squid.svg`.
+
 ## [v1.0.0] - 2026-02-28
 
 ### Release Scope
