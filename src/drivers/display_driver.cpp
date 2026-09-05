@@ -3,9 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../assets/gauge_logo.h"
+
 namespace {
 constexpr uint16_t kMainBgColor = ST77XX_BLACK;
-constexpr uint16_t kFanTextColor = ST77XX_WHITE;
+// Theme: the three gradient stops of the tycstation Krake mark.
+constexpr uint16_t kThemeBlue = 0x5D1F;    // #5aa2ff
+constexpr uint16_t kThemePurple = 0x8B7E;  // #8b6cf0
+constexpr uint16_t kThemeRed = 0xFA47;     // #ff4a3d
 constexpr int kPmBlockXOffset = 34;
 constexpr int kPmMaxSubscriptChars = 3;  // Align value column to longest subscript: "2.5"
 constexpr uint32_t kDisplayPowerSettleMs = 120;
@@ -17,14 +22,46 @@ constexpr float kDegToRad = 0.0174532925f;
 constexpr float kWifiArcStartDeg = 225.0f;
 constexpr float kWifiArcEndDeg = 315.0f;
 constexpr float kWifiArcStepDeg = 2.0f;
-constexpr uint16_t kWifiOkColor = ST77XX_GREEN;
-// This panel wiring/color-order renders RGB565 blue as visible red on-device.
-constexpr uint16_t kWifiAlertColor = ST77XX_BLUE;
+constexpr uint16_t kWifiOkColor = 0x5D1F;   // #5aa2ff, the mark's blue
+constexpr uint16_t kWifiAlertColor = 0xFA47;  // #ff4a3d, the mark's red
+// MADCTL bit 3 (the ST7789 header only defines the RGB=0 case).
+constexpr uint8_t kMadctlBgr = 0x08;
+// Gauge placement. The housing aperture masks roughly the outer 20 px of the
+// panel, so everything stays inside x 20..300.
+constexpr int kGaugeX = 60;
+// Bitmap content spans rows 36..161, so this centres the squid vertically and
+// its tentacle tips end at Y 177, just short of the PM lines.
+constexpr int kGaugeY = 16;
+// Mid-left, level with the fan reading on the right; the squid's leftmost
+// tentacle starts at X 76.
+constexpr int kWifiIconX = 10;
+constexpr int kWifiIconY = 92;
+constexpr int kWifiIconSize = 56;
 constexpr int kSetupTextX = 26;
 constexpr int kSetupTitleY = 50;
 constexpr int kSetupConnectY = 100;
 constexpr int kSetupSsidY = 130;
 constexpr int kSetupIpY = 180;
+
+// European AQI bands, blue (good) through red (very poor). PM2.5 and PM10 use
+// the same five steps against their own breakpoints, so each reading is judged
+// on its own scale.
+constexpr uint16_t kAqiColors[5] = {
+    0x5D1F,  // #5aa2ff good
+    0x5F5D,  // #5ae7ee fair
+    0x8B7E,  // #8b6cf0 moderate
+    0xFC08,  // #ff8544 poor
+    0xFA47,  // #ff4a3d very poor
+};
+
+uint16_t aqiColor(int value, const int (&breaks)[4]) {
+    for (int i = 0; i < 4; ++i) {
+        if (value <= breaks[i]) {
+            return kAqiColors[i];
+        }
+    }
+    return kAqiColors[4];
+}
 
 int clampInt(int value, int min_v, int max_v) {
     if (value < min_v) {
@@ -84,7 +121,7 @@ void buildWifiStatusText(int status_code, bool wifi_ip_visible, char* out, size_
 
 uint16_t wifiStatusColor(int status_code) {
     if (status_code == 1) {
-        return ST77XX_WHITE;
+        return kThemePurple;
     }
     if (status_code == 0) {
         return kWifiOkColor;
@@ -213,7 +250,7 @@ void drawWifiIcon(Adafruit_ST7789& tft,
 }
 
 void drawPmLine(Adafruit_ST7789& tft, int x, int y, int value, const char* subscript,
-                const SettingsV2& settings) {
+                const SettingsV2& settings, uint16_t value_color) {
     const int value_size = settings.pm_font_size > 0 ? settings.pm_font_size : 1;
     const int label_size = value_size > 1 ? value_size - 1 : 1;
     const int sub_size = label_size > 1 ? label_size - 1 : 1;
@@ -267,7 +304,7 @@ void drawPmLine(Adafruit_ST7789& tft, int x, int y, int value, const char* subsc
     snprintf(value_text, sizeof(value_text), "%d", value);
 
     tft.setTextSize(value_size);
-    tft.setTextColor(settings.pm_value_color, kMainBgColor);
+    tft.setTextColor(value_color, kMainBgColor);
     tft.setCursor(value_x, y);
     tft.print(value_text);
 
@@ -320,8 +357,10 @@ void DisplayDriver::initPanel() {
     // Keep landscape coordinate geometry from setRotation(1), then override
     // MADCTL for panel-specific orientation: MV + MX + MY flips 180 degrees
     // from MV-only, fixing upside-down rendering without reintroducing mirror.
+    // The panel is wired BGR: declaring RGB here used to swap red and blue,
+    // which callers compensated for per colour. Declare the real order instead.
     const uint8_t madctl =
-        ST77XX_MADCTL_MX | ST77XX_MADCTL_MY | ST77XX_MADCTL_MV | ST77XX_MADCTL_RGB;
+        ST77XX_MADCTL_MX | ST77XX_MADCTL_MY | ST77XX_MADCTL_MV | kMadctlBgr;
     tft_.sendCommand(ST77XX_MADCTL, &madctl, 1);
     tft_.invertDisplay(false);
     tft_.fillScreen(kMainBgColor);
@@ -389,6 +428,36 @@ void DisplayDriver::renderSetupScreen(const char* softap_ssid, const char* softa
     has_drawn_ = false;
 }
 
+// The mark doubles as the fan gauge: tentacles light left to right in
+// proportion to fan speed, the rest stay grey. The head is always lit so the
+// squid still reads as a squid at 0%.
+void DisplayDriver::drawFanGauge(int fan_percent) {
+    int lit = (fan_percent * kGaugeTentacles + 99) / 100;
+    if (lit > kGaugeTentacles) {
+        lit = kGaugeTentacles;
+    }
+    if (lit < 0) {
+        lit = 0;
+    }
+    for (int r = 0; r < static_cast<int>(kGaugeH); ++r) {
+        const uint8_t* p = kGaugeData + kGaugeRows[r];
+        uint8_t runs = *p++;
+        int x = 0;
+        for (uint8_t i = 0; i < runs; ++i) {
+            uint8_t len = p[0];
+            uint8_t part = p[1];
+            uint16_t lit_c = static_cast<uint16_t>(p[2]) | (static_cast<uint16_t>(p[3]) << 8);
+            uint16_t dim_c = static_cast<uint16_t>(p[4]) | (static_cast<uint16_t>(p[5]) << 8);
+            p += 6;
+            if (part != 0) {
+                bool on = (part == 9) || (part <= lit);
+                tft_.drawFastHLine(kGaugeX + x, kGaugeY + r, len, on ? lit_c : dim_c);
+            }
+            x += len;
+        }
+    }
+}
+
 void DisplayDriver::renderConnectingScreen() {
     setup_screen_drawn_ = false;
     tft_.fillScreen(ST77XX_BLACK);
@@ -407,6 +476,7 @@ void DisplayDriver::render(const DeviceState& state, const SettingsV2& settings)
 
     if (!has_drawn_) {
         tft_.fillScreen(kMainBgColor);
+        drawFanGauge(0);
         has_drawn_ = true;
         last_fan_percent_ = -1;
         last_pm25_ = -1;
@@ -437,89 +507,46 @@ void DisplayDriver::render(const DeviceState& state, const SettingsV2& settings)
         pm_block_h = line_height;
     }
 
-    int wifi_status = wifiStatusCode(state.wifi_enabled, state.wifi_ready);
-    char status_text[sizeof(last_wifi_status_text_)] = {0};
-    buildWifiStatusText(wifi_status, state.wifi_ip_visible, status_text, sizeof(status_text));
-
-    if (last_wifi_status_code_ != wifi_status ||
-        strcmp(last_wifi_status_text_, status_text) != 0) {
-        last_wifi_status_code_ = wifi_status;
-        strncpy(last_wifi_status_text_, status_text, sizeof(last_wifi_status_text_) - 1);
-        last_wifi_status_text_[sizeof(last_wifi_status_text_) - 1] = '\0';
-
-        int status_h = 8 * kStatusTextSize;
-        int status_y = settings.fan_y - status_h - 4;
-        if (status_y < 0) {
-            status_y = 0;
-        }
-
-        if (last_wifi_status_w_ > 0) {
-            tft_.fillRect(last_wifi_status_x_, last_wifi_status_y_, last_wifi_status_w_, status_h,
-                          kMainBgColor);
-            last_wifi_status_w_ = 0;
-        }
-
-        int status_w = 0;
-        if (status_text[0] != '\0') {
-            status_w = (int) strlen(status_text) * 6 * kStatusTextSize;
-            if (status_w < 1) {
-                status_w = 1;
-            }
-        }
-        if (status_w > 0) {
-            int centered_x = (tft_.width() - status_w) / 2;
-            if (centered_x < 0) {
-                centered_x = 0;
-            }
-            if (centered_x + status_w > tft_.width()) {
-                centered_x = tft_.width() - status_w;
-                if (centered_x < 0) {
-                    centered_x = 0;
-                }
-            }
-            tft_.fillRect(centered_x, status_y, status_w, status_h, kMainBgColor);
-            tft_.setTextSize(kStatusTextSize);
-            tft_.setTextColor(wifiStatusColor(wifi_status), kMainBgColor);
-            tft_.setCursor(centered_x, status_y);
-            tft_.print(status_text);
-
-            last_wifi_status_x_ = centered_x;
-            last_wifi_status_y_ = status_y;
-            last_wifi_status_w_ = status_w;
-        } else {
-            last_wifi_status_x_ = 0;
-            last_wifi_status_y_ = status_y;
-            last_wifi_status_w_ = 0;
-        }
-    }
-
+    // The coloured Wi-Fi icon carries connected/not; a status line has nowhere
+    // to live now that the gauge fills the panel, and the top edge clipped it.
     if (last_wifi_enabled_ != state.wifi_enabled || last_wifi_ready_ != state.wifi_ready) {
         last_wifi_enabled_ = state.wifi_enabled;
         last_wifi_ready_ = state.wifi_ready;
 
-        int wifi_size = clampInt(pm_block_h, kWifiIconMinSize, kWifiIconMaxSize);
-        int wifi_x = clampInt(settings.pm_x - (wifi_size / 2), 0, tft_.width() - 1);
-        int wifi_y = clampInt(settings.pm_y - 12, 0, tft_.height() - 1);
-        drawWifiIcon(tft_, wifi_x, wifi_y, wifi_size, state.wifi_enabled, state.wifi_ready);
+        drawWifiIcon(tft_, kWifiIconX, kWifiIconY, kWifiIconSize, state.wifi_enabled,
+                     state.wifi_ready);
     }
 
     if (last_fan_percent_ != state.fan_percent) {
         last_fan_percent_ = state.fan_percent;
+        drawFanGauge(state.fan_percent);
         tft_.setCursor(settings.fan_x, settings.fan_y);
-        tft_.setTextColor(kFanTextColor, kMainBgColor);
+        tft_.setTextColor(settings.fan_color, kMainBgColor);
         tft_.setTextSize(settings.fan_font_size);
 
         if (state.fan_percent <= 0) {
             tft_.print("OFF");
-            tft_.fillRect(settings.fan_x + (3 * 6 * settings.fan_font_size), settings.fan_y, 120,
-                          8 * settings.fan_font_size, kMainBgColor);
+            // Clear just the cells the percent symbol would have used.
+            int clear_x = settings.fan_x + (3 * 6 * settings.fan_font_size);
+            int clear_w = 2 * 6 * settings.fan_font_size;
+            if (clear_x + clear_w > tft_.width()) {
+                clear_w = tft_.width() - clear_x;
+            }
+            if (clear_w > 0) {
+                tft_.fillRect(clear_x, settings.fan_y, clear_w, 8 * settings.fan_font_size,
+                              kMainBgColor);
+            }
         } else {
             char fan_text[8];
             snprintf(fan_text, sizeof(fan_text), "%3d", state.fan_percent);
             tft_.print(fan_text);
             int symbol_size = settings.fan_font_size > 1 ? settings.fan_font_size / 2 : 1;
             tft_.setTextSize(symbol_size);
-            tft_.print("% ");
+            // Sit the symbol on the digits' baseline instead of the top of the
+            // line, and drop the trailing pad cell so it stays clear of the mark.
+            tft_.setCursor(settings.fan_x + (3 * 6 * settings.fan_font_size),
+                           settings.fan_y + 8 * (settings.fan_font_size - symbol_size));
+            tft_.print("%");
         }
     }
 
@@ -532,7 +559,9 @@ void DisplayDriver::render(const DeviceState& state, const SettingsV2& settings)
         if (pm_x >= tft_.width()) {
             pm_x = tft_.width() - 1;
         }
-        drawPmLine(tft_, pm_x, settings.pm_y, state.pm25_smooth, "2.5", settings);
+        static const int kPm25Breaks[4] = {10, 20, 25, 50};
+        drawPmLine(tft_, pm_x, settings.pm_y, state.pm25_smooth, "2.5", settings,
+                   aqiColor(state.pm25_smooth, kPm25Breaks));
     }
 
     if (last_pm10_ != state.pm10_smooth) {
@@ -544,6 +573,8 @@ void DisplayDriver::render(const DeviceState& state, const SettingsV2& settings)
         if (pm_x >= tft_.width()) {
             pm_x = tft_.width() - 1;
         }
-        drawPmLine(tft_, pm_x, pm10_y, state.pm10_smooth, "10", settings);
+        static const int kPm10Breaks[4] = {20, 40, 50, 100};
+        drawPmLine(tft_, pm_x, pm10_y, state.pm10_smooth, "10", settings,
+                   aqiColor(state.pm10_smooth, kPm10Breaks));
     }
 }

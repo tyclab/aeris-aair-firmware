@@ -190,16 +190,20 @@ void SettingsStore::applyDefaults(SettingsV2& settings) {
     safeCopy(settings.device_id, sizeof(settings.device_id), id.c_str());
     buildDefaultTopicRoot(settings.device_id, settings.mqtt_topic_root, sizeof(settings.mqtt_topic_root));
 
-    settings.fan_font_size = 10;
-    settings.fan_x = 30;
-    settings.fan_y = 70;
+    // The squid gauge owns the middle of the panel; the reading sits beside it,
+    // vertically centred, its "%" cell ending at X 312 inside the oval.
+    settings.fan_font_size = 4;
+    settings.fan_x = 228;
+    settings.fan_y = 104;
     settings.pm_font_size = 3;
     settings.pm_x = 60;
-    settings.pm_y = 180;
+    settings.pm_y = 182;
 
-    settings.fan_color = ST77XX_WHITE;
-    settings.pm_label_color = ST77XX_CYAN;
-    settings.pm_value_color = ST77XX_WHITE;
+    // The three gradient stops of the tycstation Krake mark: #5aa2ff, #8b6cf0,
+    // #ff4a3d. Overridable per device through the settings API.
+    settings.fan_color = 0x5D1F;
+    settings.pm_label_color = 0x8B7E;
+    settings.pm_value_color = 0xFA47;
     sanitize(settings);
 }
 

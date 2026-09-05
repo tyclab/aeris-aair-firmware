@@ -20,6 +20,7 @@ public:
 private:
     void initPanel();
     void resetRenderCache();
+    void drawFanGauge(int fan_percent);
 
     Adafruit_ST7789 tft_;
     int bl_pin_;

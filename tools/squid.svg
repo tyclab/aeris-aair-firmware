@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="TycStation">
+  <title>TycStation — Krake mark</title>
+  <defs>
+    <linearGradient id="poles" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5aa2ff"/><stop offset="48%" stop-color="#8b6cf0"/><stop offset="100%" stop-color="#ff4a3d"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(32 30) scale(0.23)" fill="none" stroke="url(#poles)" stroke-linecap="round" stroke-linejoin="round" stroke-width="13">
+    <g>
+      <path d="M-40,22 C-70,24 -97,40 -105,64 C-111,83 -97,95 -85,87 C-76,81 -79,69 -88,69"/>
+      <path d="M-28,31 C-50,45 -69,64 -71,88 C-72,105 -59,114 -49,106 C-41,99 -45,88 -54,89"/>
+      <path d="M-15,36 C-26,60 -34,82 -30,103 C-27,118 -14,123 -8,113"/>
+      <path d="M-5,37 C-7,60 -10,79 -6,95"/>
+      <g transform="scale(-1,1)">
+        <path d="M-40,22 C-70,24 -97,40 -105,64 C-111,83 -97,95 -85,87 C-76,81 -79,69 -88,69"/>
+        <path d="M-28,31 C-50,45 -69,64 -71,88 C-72,105 -59,114 -49,106 C-41,99 -45,88 -54,89"/>
+        <path d="M-15,36 C-26,60 -34,82 -30,103 C-27,118 -14,123 -8,113"/>
+        <path d="M-5,37 C-7,60 -10,79 -6,95"/>
+      </g>
+    </g>
+    <path d="M-53,-2 C-53,-42 -30,-66 0,-66 C30,-66 53,-42 53,-2 C53,20 30,35 0,35 C-30,35 -53,20 -53,-2 Z" fill="#0b1018"/>
+    <g stroke="none" fill="#b48cf5"><ellipse cx="-19" cy="-10" rx="8" ry="9.5"/><ellipse cx="19" cy="-10" rx="8" ry="9.5"/></g>
+    <path d="M-9,12 C-4,17 4,17 9,12" stroke-width="9"/>
+  </g>
+</svg>
