@@ -1,0 +1,364 @@
+:root {
+  --blue: #5aa2ff;
+  --violet: #8b6cf0;
+  --red: #ff4a3d;
+  --ground: #0d1017;
+  --panel: #151a24;
+  --panel-2: #1d2331;
+  --line: #2a3242;
+  --ink: #e8ecf4;
+  --ink-dim: #97a2b6;
+  --radius: 0.75rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 2rem 1.25rem 4rem;
+  background: radial-gradient(ellipse at 50% -10%, #1a2133 0%, var(--ground) 60%);
+  color: var(--ink);
+  font: 1rem/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main,
+.head {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.head {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+
+.mark {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: conic-gradient(from 200deg, var(--blue), var(--violet), var(--red), var(--blue));
+  box-shadow: 0 0 1.5rem rgba(90, 162, 255, 0.35);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.sub {
+  margin: 0.15rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+}
+
+.card {
+  background: var(--panel);
+  border: 0.0625rem solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.notice {
+  background: rgba(255, 74, 61, 0.12);
+  border: 0.0625rem solid var(--red);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 0 0 1.25rem;
+}
+
+.hint,
+.warn {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.warn {
+  color: var(--red);
+}
+
+a {
+  color: var(--blue);
+}
+
+/* rows */
+.row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.row > label {
+  flex: none;
+  width: 9rem;
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+}
+
+.row.check > label {
+  width: auto;
+  color: var(--ink);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.85rem 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field label {
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+}
+
+input[type="text"],
+input[type="password"],
+select {
+  background: var(--panel-2);
+  border: 0.0625rem solid var(--line);
+  border-radius: 0.4rem;
+  color: var(--ink);
+  padding: 0.45em 0.7em;
+  font: inherit;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+select:focus {
+  outline: 0.125rem solid var(--violet);
+  outline-offset: 0.0625rem;
+}
+
+input[type="file"] {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+input[type="checkbox"] {
+  width: 1em;
+  height: 1em;
+  accent-color: var(--violet);
+}
+
+select {
+  flex: 1 1 14rem;
+}
+
+/* steps */
+.steps {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  border-top: 0.0625rem solid var(--line);
+}
+
+.steps li {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+  border-bottom: 0.0625rem solid var(--line);
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+}
+
+.steps .dot {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--line);
+  align-self: center;
+}
+
+.steps .what {
+  flex: 1;
+}
+
+.steps .state {
+  flex: none;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.steps li[data-status="active"] {
+  color: var(--ink);
+}
+
+.steps li[data-status="active"] .dot {
+  background: var(--blue);
+  box-shadow: 0 0 0 0.25rem rgba(90, 162, 255, 0.2);
+}
+
+.steps li[data-status="done"] .dot {
+  background: var(--violet);
+}
+
+.steps li[data-status="done"] .state {
+  color: var(--violet);
+}
+
+.steps li[data-status="error"] {
+  color: var(--ink);
+}
+
+.steps li[data-status="error"] .dot,
+.steps li[data-status="error"] .state {
+  background: none;
+  color: var(--red);
+}
+
+.steps li[data-status="error"] .dot {
+  background: var(--red);
+}
+
+.steps li[data-status="skipped"] .state {
+  color: var(--ink-dim);
+}
+
+/* progress */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.bar {
+  flex: 1;
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  width: 0;
+  border-radius: 0.25rem;
+  background: linear-gradient(90deg, var(--blue), var(--violet));
+  transition: width 0.15s linear;
+}
+
+.progress-text {
+  flex: none;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* buttons */
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+button {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.5em 1.1em;
+  border-radius: 0.4rem;
+  border: 0.0625rem solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--violet);
+}
+
+button.primary {
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--blue), var(--violet));
+  color: #0b0e14;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.result {
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+}
+
+.result.ok {
+  color: var(--blue);
+}
+
+.result.err {
+  color: var(--red);
+}
+
+/* log */
+.log {
+  max-height: 18rem;
+  overflow-y: auto;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--ground);
+  border: 0.0625rem solid var(--line);
+  border-radius: 0.4rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.log p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log time {
+  color: var(--ink-dim);
+  margin-right: 0.7em;
+}
+
+.log p.err {
+  color: var(--red);
+}
+
+.log p.ok {
+  color: var(--blue);
+}
+
+.log:empty::before {
+  content: "nothing yet";
+  color: var(--ink-dim);
+}

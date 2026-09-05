@@ -87,6 +87,28 @@ Flash map: `0x08020000` system-part1, `0x08060000` system-part2, `0x080A0000`
 application. Settings and the filter record live in emulated EEPROM and
 survive application flashes.
 
+### Browser flasher
+
+https://tyclab.github.io/aeris-aair-firmware/flasher/ &mdash; desktop Chrome,
+Edge or Opera (needs WebUSB and Web Serial). Puts the unit into DFU, writes
+the application, and can optionally also write the Device OS 2.3.1 system
+parts; a second card sends the serial provisioning line from the section
+below. It never writes the bootloader, so bootloader v7 &rarr; v1003 stays
+the CLI/YMODEM step above.
+
+The unit re-enumerates under a different USB product id when it drops into
+DFU (`2b04:c006` &rarr; `2b04:d006`), and WebUSB permission is per product id.
+The first time, the page asks for that permission via a "Select the DFU
+device" button, opening the chooser a second time; once granted &mdash; and for
+a unit already sitting in DFU &mdash; the flash runs without any further
+chooser.
+
+On Windows 10/11 both product ids bind WinUSB automatically; no driver
+install. On Linux, either add a udev rule for vendor id `2b04` or run the
+browser as a user with access to the USB device node.
+
+Local: `python3 -m http.server` from `docs/`, then open `/flasher/`.
+
 ## Provision
 
 In setup mode the application reads one line on USB serial:

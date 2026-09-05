@@ -1,0 +1,11 @@
+{
+  "versions": [
+    {
+      "name": "tyclab v1.1.0",
+      "app": "firmware/aeris-aair-tyclab-v1.1.0.bin",
+      "device_os": "2.3.1",
+      "system_part1": "firmware/photon-system-part1@2.3.1.bin",
+      "system_part2": "firmware/photon-system-part2@2.3.1.bin"
+    }
+  ]
+}

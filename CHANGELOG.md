@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Flasher
+
+- Browser flasher at `docs/flasher/`: WebUSB DFU flash of the application, optional Device OS 2.3.1 system parts, and Web Serial provisioning, served from GitHub Pages.
+- Bundles particle-usb 4.3.0 for the browser (`docs/flasher/vendor/`); never writes the bootloader sector.
+
 ## [tyclab v1.1.0] - 2026-09-05
 
 First release of the tyclab flavour, forked from upstream v1.0.0.
