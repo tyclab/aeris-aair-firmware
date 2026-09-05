@@ -83,6 +83,8 @@ stty -F /dev/ttyACM0 14400            # 14400 baud open = enter DFU
 dfu-util -d 2b04:d006 -a 0 -s 0x080A0000:leave -D target/src.bin
 ```
 
+Or use the browser flasher: https://tyclab.github.io/aeris-aair-firmware/flasher/
+
 Flash map: `0x08020000` system-part1, `0x08060000` system-part2, `0x080A0000`
 application. Settings and the filter record live in emulated EEPROM and
 survive application flashes.

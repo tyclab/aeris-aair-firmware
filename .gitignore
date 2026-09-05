@@ -1,3 +1,4 @@
 *.bin
+!docs/flasher/firmware/*.bin
 target/
 tasks/
