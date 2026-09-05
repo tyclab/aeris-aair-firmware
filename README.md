@@ -97,9 +97,11 @@ below. It never writes the bootloader, so bootloader v7 &rarr; v1003 stays
 the CLI/YMODEM step above.
 
 The unit re-enumerates under a different USB product id when it drops into
-DFU (`2b04:c006` &rarr; `2b04:d006`), and WebUSB permission is per product id,
-so the browser's device chooser opens twice: once for the normal-mode unit,
-once for the DFU-mode unit.
+DFU (`2b04:c006` &rarr; `2b04:d006`), and WebUSB permission is per product id.
+The first time, the page asks for that permission via a "Select the DFU
+device" button, opening the chooser a second time; once granted &mdash; and for
+a unit already sitting in DFU &mdash; the flash runs without any further
+chooser.
 
 On Windows 10/11 both product ids bind WinUSB automatically; no driver
 install. On Linux, either add a udev rule for vendor id `2b04` or run the

@@ -1,10 +1,11 @@
 # vendor/particle-usb.bundle.js
 
 Browser build of [particle-usb](https://github.com/particle-iot/particle-usb)
-**4.3.0** (Apache-2.0), exposing `window.ParticleUsb`. The two-chooser DFU
-flow in `app.js` (normal-mode connect, `enterDfuMode`, a second
-`requestDevice` for the re-enumerated DFU product id) follows the pattern
-Particle's own browser restore tool uses against this same library.
+**4.3.0** (Apache-2.0), exposing `window.ParticleUsb`. The DFU flow in
+`app.js` (normal-mode connect, `enterDfuMode`, then a second `requestDevice`
+for the re-enumerated DFU product id &mdash; skipped when that id is already
+permitted) follows the pattern Particle's own browser restore tool uses
+against this same library.
 
 Rebuild:
 
