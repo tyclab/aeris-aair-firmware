@@ -1,0 +1,12 @@
+[submodule "lib/Adafruit_BusIO_RK"]
+	path = lib/Adafruit_BusIO_RK
+	url = https://github.com/rickkas7/Adafruit_BusIO_RK
+[submodule "lib/Adafruit_GFX_RK"]
+	path = lib/Adafruit_GFX_RK
+	url = https://github.com/rickkas7/Adafruit_GFX_RK
+[submodule "lib/Adafruit_ST7735_RK"]
+	path = lib/Adafruit_ST7735_RK
+	url = https://github.com/rickkas7/Adafruit_ST7735_RK
+[submodule "lib/MQTT"]
+	path = lib/MQTT
+	url = https://github.com/hirotakaster/MQTT
