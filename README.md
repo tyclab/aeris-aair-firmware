@@ -133,7 +133,8 @@ It answers `PROV OK rebooting` or `PROV ERR <reason>`. `IP?` returns the
 current address. `tools/serial_provision.py` sends the line and retries.
 Leave listening mode first with `x`; while it is active Device OS's console
 owns the same port, and the application refuses to parse until it has gone.
-Oversized or empty fields are rejected rather than truncated.
+Oversized, empty and topic-unsafe fields are rejected rather than truncated
+or normalised. Both tools send `x` themselves before the line.
 The SoftAP flow from upstream still works (`Aeris-XXXX`, `192.168.0.1`).
 
 ## Regenerate the gauge
@@ -150,7 +151,7 @@ belongs to which tentacle and emits per-row RLE. Never hand-edit the header.
 - Up: fan `+5%`. Down: fan `-5%`. Hold either one and it repeats: after
   500 ms it steps every 150 ms, so a hold sweeps 0 to 100 in about three
   seconds while a tap still moves a single 5% step.
-- AirQ: short press toggles the key lights; hold 5 s toggles Wi-Fi.
+- AirQ: short press toggles the key lights; hold 3 s toggles Wi-Fi.
 - Power: short press toggles the purifier; hold 8 s wipes Wi-Fi and reboots
   into setup mode.
 

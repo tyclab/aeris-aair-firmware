@@ -415,6 +415,8 @@ async function provision() {
   try {
     for (let attempt = 1; attempt <= 5; attempt++) {
       rx = '';
+      await send('x'); // leave listening mode; its console owns the same port
+      await sleep(300);
       await send('\n'); // flush any stray characters out of the unit's line buffer
       await sleep(300);
       await send(line);
@@ -446,6 +448,8 @@ async function askIp() {
   $('ask-ip').disabled = true;
   try {
     rx = '';
+    await send('x'); // leave listening mode; its console owns the same port
+    await sleep(300);
     await send('IP?\n');
     const match = await waitForRx(/(\d{1,3}(?:\.\d{1,3}){3})/, 8000);
     if (!match) {

@@ -30,6 +30,8 @@ prov = "PROV\t" + "\t".join([ssid, wifi_pass, mqtt_host, mqtt_port, mqtt_user, m
                              topic_root, device_id]) + "\n"
 
 for attempt in range(1, 6):
+    os.write(fd, b"x")  # leave listening mode; its console owns the same port
+    time.sleep(0.3)
     os.write(fd, b"\n")  # flush any stray chars in the unit's line buffer
     time.sleep(0.3)
     os.write(fd, prov.encode())

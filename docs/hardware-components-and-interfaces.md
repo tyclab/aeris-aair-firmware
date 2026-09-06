@@ -68,7 +68,7 @@ Date: 2026-02-22
 - Supported operation interface (button to command mapping):
   - `D1`: `AdjustFanPercent +5`, repeating while held
   - `D2`: `AdjustFanPercent -5`, repeating while held
-  - `D3`: short press `ToggleLights`; long press (>=5s) `ToggleWifi`
+  - `D3`: short press `ToggleLights`; long press (>=3s) `ToggleWifi`
   - `D4`: short press `TogglePower`; long press (>=8s) `ResetWifiSettings` (clear saved Wi-Fi and reboot)
 
 ### 2.4 PM Sensor

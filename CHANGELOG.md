@@ -13,8 +13,11 @@ All notable changes to this project are documented in this file.
 
 - Serial provisioning refuses to parse while listening mode is active. Device OS's own
   console reads the same port and would consume part of the `PROV` line.
-- Empty or oversized fields are rejected (`PROV ERR ssid`, `PROV ERR too long`) instead of
-  being silently truncated into a unit that provisions cleanly and never connects.
+- Empty, oversized and topic-unsafe fields are rejected (`PROV ERR ssid`, `PROV ERR host`,
+  `PROV ERR too long`, `PROV ERR device_id`, `PROV ERR topic_root`) instead of being silently
+  truncated or normalised into a unit that provisions cleanly and never connects.
+- `tools/serial_provision.py` and the browser flasher send `x` themselves before the line, so
+  the fallback still works against a unit that boots straight into listening mode.
 - The setup web server no longer pretends to serve the SoftAP interface. `TCPServer::begin()`
   and `available()` both return early unless `Network.ready()`, which listening mode never
   satisfies, so the config API is station-only.

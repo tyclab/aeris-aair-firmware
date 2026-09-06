@@ -1,5 +1,7 @@
 #include "app_controller.h"
 
+#include "../util/topic_validation.h"
+
 namespace {
 const int PIN_FAN = D0;
 const int PIN_SENSOR_TX = A6;
@@ -181,6 +183,9 @@ void AppController::tickSensor(uint32_t now_ms) {
 // it has actually gone.
 void AppController::tickSerialProvision() {
     if (WiFi.listening()) {
+        // Whatever we half-read before the console took the port would otherwise
+        // be prepended to the first line we accept after it lets go.
+        serial_prov_len_ = 0;
         return;
     }
 
@@ -229,6 +234,12 @@ void AppController::tickSerialProvision() {
             Serial.println("PROV ERR ssid");
             continue;
         }
+        // An empty broker host leaves mqtt_enabled set but MqttClient disabled:
+        // the same provisions-cleanly-never-connects unit the checks exist for.
+        if (fields[2][0] == '\0') {
+            Serial.println("PROV ERR host");
+            continue;
+        }
         // Silently truncating a passphrase or a broker host produces a unit that
         // provisions cleanly and then never connects, so refuse instead.
         const size_t limits[8] = {
@@ -245,6 +256,16 @@ void AppController::tickSerialProvision() {
         }
         if (too_long) {
             Serial.println("PROV ERR too long");
+            continue;
+        }
+        // sanitize() rewrites these rather than failing, so an unsafe topic root
+        // would answer PROV OK and put the unit on the default root instead.
+        if (!isDeviceIdTopicSafe(fields[7], sizeof(settings_.device_id) - 1)) {
+            Serial.println("PROV ERR device_id");
+            continue;
+        }
+        if (!isTopicRootSafe(fields[6], sizeof(settings_.mqtt_topic_root))) {
+            Serial.println("PROV ERR topic_root");
             continue;
         }
 
