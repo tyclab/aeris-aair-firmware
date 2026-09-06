@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Board
+
+- `/api/v2/state` reports `firmware_version` and `firmware_build`, so two units running
+  different unreleased work can be told apart without consulting a flashing log.
+
 ### Provisioning
 
 - Serial provisioning refuses to parse while listening mode is active. Device OS's own

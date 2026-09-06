@@ -45,7 +45,7 @@ Base path on device local IP:
 - `GET /` serves the built-in Web UI dashboard.
 - `GET /api/v2/settings` returns current settings JSON (without secret redaction logic).
 - `POST /api/v2/settings` with urlencoded form updates settings.
-- `GET /api/v2/state` returns live runtime state (`pm25`, `pm10`, fan, connectivity, `screen_light_on`).
+- `GET /api/v2/state` returns live runtime state (`pm25`, `pm10`, fan, connectivity, `screen_light_on`), plus `firmware_version` and `firmware_build`, which is the compile timestamp and so only truthful after a clean build.
 - `POST /api/v2/control` with urlencoded form sends runtime commands (`fan_percent`, `lights`, `screen_light`).
 - `POST /api/v2/system/reboot` requests reboot.
 - `POST /api/v2/system/dfu` requests DFU mode.

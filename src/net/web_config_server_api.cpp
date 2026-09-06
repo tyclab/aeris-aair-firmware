@@ -1,5 +1,6 @@
 #include "web_config_server.h"
 
+#include "../core/version.h"
 #include "../util/parse_int.h"
 #include "../util/string_safety.h"
 #include "../util/topic_validation.h"
@@ -177,7 +178,8 @@ void WebConfigServer::handleApiStateGet(TCPClient& client) {
                            "\"wifi_ready\":%d,\"mqtt_connected\":%d,\"mqtt_enabled\":%lu,\"uptime_s\":%lu,"
                            "\"sensor_parse_errors\":%lu,\"sensor_age_ms\":%lu,"
                            "\"command_drop_button_count\":%lu,\"command_drop_mqtt_count\":%lu,"
-                           "\"command_drop_web_count\":%lu,\"mqtt_publish_drop_count\":%lu}",
+                           "\"command_drop_web_count\":%lu,\"mqtt_publish_drop_count\":%lu,"
+                           "\"firmware_version\":\"%s\",\"firmware_build\":\"%s\"}",
                            state_->fan_percent,
                            state_->lights_on ? 1 : 0,
                            state_->screen_light_on ? 1 : 0,
@@ -192,7 +194,9 @@ void WebConfigServer::handleApiStateGet(TCPClient& client) {
                            static_cast<unsigned long>(state_->command_drop_button_count),
                            static_cast<unsigned long>(state_->command_drop_mqtt_count),
                            static_cast<unsigned long>(state_->command_drop_web_count),
-                           static_cast<unsigned long>(state_->mqtt_publish_drop_count));
+                           static_cast<unsigned long>(state_->mqtt_publish_drop_count),
+                           FIRMWARE_VERSION,
+                           FIRMWARE_BUILD);
     size_t body_len = (written < 0) ? 0 : static_cast<size_t>(written);
     if (body_len >= sizeof(json)) {
         body_len = sizeof(json) - 1;

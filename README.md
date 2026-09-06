@@ -72,6 +72,11 @@ make -C device-os/modules/photon/user-part PLATFORM=photon APPDIR=$PWD COMPILE_L
 # -> target/src.bin
 ```
 
+`/api/v2/state` reports `firmware_version` and `firmware_build`, and the build
+stamp is `__DATE__`/`__TIME__`, so remove `target/` before a build you intend
+to flash — an incremental build can carry an older stamp and misidentify the
+unit later.
+
 Needs `gcc-arm-none-eabi` 9.x on `PATH`. The Particle libraries are pinned as
 submodules under `lib/` (Adafruit_ST7735_RK 1.10.4 with GFX and BusIO, MQTT
 0.4.32), so clone with `--recurse-submodules`.
