@@ -87,6 +87,13 @@ Flash map: `0x08020000` system-part1, `0x08060000` system-part2, `0x080A0000`
 application. Settings and the filter record live in emulated EEPROM and
 survive application flashes.
 
+The board has the Particle `RESET` and `SETUP` buttons on its back, so DFU does
+not depend on a working application: hold `SETUP`, tap `RESET`, and release when
+the status LED blinks yellow. Holding `SETUP` alone for about three seconds gives
+listening mode, which is the serial console the bootloader update below needs.
+Never hold past yellow to white; that is factory reset, and the factory image on
+an OEM unit is not ours. See `docs/hardware-components-and-interfaces.md` 6.4.
+
 ### Browser flasher
 
 https://tyclab.github.io/aeris-aair-firmware/flasher/ &mdash; desktop Chrome,

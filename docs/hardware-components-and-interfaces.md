@@ -169,15 +169,23 @@ Notes:
 Photographed on a powered spare unit, 2026-09-04. Unlike section 5 these are observations of
 our own hardware, so treat them as confirmed unless a row says otherwise.
 
-![EC_UI board, front](img/ui-board-front.jpg)
+![EC_UI board, front, powered](img/ui-board-front.jpg)
 
 ![EC_UI board, harness connector](img/ui-board-harness.jpg)
 
+Stripped down 2026-09-06, both sides:
+
+![EC_UI board, back, Particle section](img/ui-board-back.jpg)
+
+![EC_UI board, front, display removed](img/ui-board-front-bare.jpg)
+
 ### 6.1 Board identity
 
-Silkscreen on the round front board reads `Aair EC_UI` followed by `MB_110-Z...`, the tail
-obscured by a reflector. This is the user-interface board, distinct from the mainboard the
-section 5 gist describes.
+Silkscreen on the round board reads `Aair EC UI MB 110-220V V6`. The 2026-09-04 photograph
+had the tail obscured by a reflector; the 2026-09-06 strip-down settles it. One board carries
+both the user interface and the Particle section, so the section 5 gist's separate "top
+control board" does not describe this revision. A QC sticker on the back is ticked `220V`
+`EU`. The TFT is marked `FLR-T156-V0` / `JS24013D-2` / `2022/05/03`.
 
 ### 6.2 What is on it
 
@@ -215,13 +223,45 @@ evidence that this harness is the Photon interface rather than an internal bus:
 | `RX`, `TX` | `Serial1`, PM sensor UART, `SensorDriver` | matches section 4 |
 | `DAC` | probably the `A6` sensor wake line | inferred, unverified |
 
+The bare-board photograph shows the same six names on header `P2` in the order `+5V`, `GND`,
+`EN`, `DO`, `RX`, `DAC`, so the order question in section 7 is answered by silkscreen: the
+harness `D0` is `DO` on the board and sits fourth, and there is an `EN` pin the earlier
+photograph missed.
+
 The `DAC` row rests on Particle's pin aliasing, where `A6` is also `DAC2`. It is not a
 measurement. Confirm it before relying on it.
 
+### 6.4 Particle section and the two buttons
+
+The back of the board is the Particle half. It carries a micro-USB jack, a USI radio module
+(`U9`, marked `BM-09` — the module Particle uses in the Photon family) with a u.FL pigtail to
+a strip antenna, and two tact switches silkscreened `RESET` and `SETUP`. Two rows of pads
+break out Particle net names: `3V3`, `RST`, `GND`, `D0`-`D7`, `DAC`, `RX`, `TX`, `+5V`, `EN`.
+The device enumerates as a Photon (`2b04:c006` running, `2b04:d006` in DFU), which is what the
+flashing procedure in the README already relies on.
+
+So the buttons are the standard Particle pair, handled by Device OS rather than by this
+application:
+
+| Action | Result |
+|---|---|
+| Tap `RESET` | reboot |
+| Hold `SETUP` ~3 s, LED blinks dark blue | listening mode, the serial provisioning entry point |
+| Hold `SETUP` ~10 s longer, LED blinks blue rapidly | network reset, erases stored Wi-Fi credentials |
+| Hold `SETUP`, tap `RESET`, release at blinking magenta | safe mode, Device OS boots without this application |
+| Hold `SETUP`, tap `RESET`, release at blinking yellow | DFU mode |
+| Hold `SETUP`, tap `RESET`, hold past yellow to white | factory reset — do not use, see below |
+
+The yellow release matters for recovery: it reaches DFU with no working application and no
+`stty -F /dev/ttyACM0 14400`, so a unit whose firmware hangs is still flashable, including from
+the browser flasher. Prefer it over the baud-rate trick whenever the board is accessible.
+
+Do not release at white. Factory reset restores the Photon's factory backup image, which on an
+OEM unit is not our application and is not a known-good state.
+
 ## 7. Recommended Next Steps
 
-- Confirm the harness pin ORDER and settle the `DAC` to `A6` question in section 6.3, with a
-  meter rather than another photograph.
+- Settle the `DAC` to `A6` question in section 6.3 with a meter rather than another photograph.
 - Use an oscilloscope or logic analyzer to verify the actual sensor model and command set behind `A6` and `Serial1`.
 - Add a wiring diagram showing physical connections between `Particle Photon` and the original board MCU(s) if it is a dual-MCU architecture.
 - Keep this document synchronized with `docs/interfaces.md` whenever topics/API are changed.
