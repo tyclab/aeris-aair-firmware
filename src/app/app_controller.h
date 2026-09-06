@@ -75,6 +75,7 @@ private:
     uint32_t last_filter_decrement_ms_;
     uint32_t last_report_ms_;
     uint32_t last_health_publish_ms_;
+    uint32_t last_state_publish_ms_;
     uint32_t last_sensor_sample_ms_;
     uint32_t wifi_ip_visible_until_ms_;
 

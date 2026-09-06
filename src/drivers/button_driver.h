@@ -19,6 +19,7 @@ private:
         int last_state;
         uint32_t last_change_ms;
         uint32_t press_start_ms;
+        uint32_t next_repeat_ms;
         bool long_press_fired;
     };
 

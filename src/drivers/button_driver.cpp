@@ -4,13 +4,18 @@ namespace {
 const uint32_t kDebounceMs = 40;
 const uint32_t kMiddleLongPressMs = 3000;
 const uint32_t kPowerResetLongPressMs = 8000;
+// Up/down auto-repeat. A tap keeps the 5% step; holding sweeps 0 to 100 in
+// about three seconds, which is what saves the tapping.
+const int kFanStepPercent = 5;
+const uint32_t kRepeatDelayMs = 500;
+const uint32_t kRepeatIntervalMs = 150;
 }
 
 ButtonDriver::ButtonDriver(int btn_up, int btn_down, int btn_extra, int btn_power) {
-    entries_[0] = {btn_up, LOW, LOW, 0, 0, false};
-    entries_[1] = {btn_down, LOW, LOW, 0, 0, false};
-    entries_[2] = {btn_extra, LOW, LOW, 0, 0, false};
-    entries_[3] = {btn_power, LOW, LOW, 0, 0, false};
+    entries_[0] = {btn_up, LOW, LOW, 0, 0, 0, false};
+    entries_[1] = {btn_down, LOW, LOW, 0, 0, 0, false};
+    entries_[2] = {btn_extra, LOW, LOW, 0, 0, 0, false};
+    entries_[3] = {btn_power, LOW, LOW, 0, 0, 0, false};
 }
 
 void ButtonDriver::init() {
@@ -20,6 +25,7 @@ void ButtonDriver::init() {
         entries_[i].last_state = entries_[i].idle_state;
         entries_[i].last_change_ms = millis();
         entries_[i].press_start_ms = entries_[i].last_change_ms;
+        entries_[i].next_repeat_ms = entries_[i].last_change_ms;
         entries_[i].long_press_fired = false;
     }
 }
@@ -57,6 +63,17 @@ bool ButtonDriver::poll(Command& out, uint32_t now_ms) {
             out.source = CommandSource::Button;
             out.type = CommandType::ResetWifiSettings;
             out.value = 0;
+            return true;
+        }
+
+        if ((i == 0 || i == 1) &&
+            raw_pressed &&
+            debounced_pressed &&
+            (int32_t)(now_ms - entries_[i].next_repeat_ms) >= 0) {
+            entries_[i].next_repeat_ms = now_ms + kRepeatIntervalMs;
+            out.source = CommandSource::Button;
+            out.type = CommandType::AdjustFanPercent;
+            out.value = (i == 0) ? kFanStepPercent : -kFanStepPercent;
             return true;
         }
 
@@ -102,17 +119,10 @@ bool ButtonDriver::poll(Command& out, uint32_t now_ms) {
                 continue;
             }
 
+            entries_[i].next_repeat_ms = now_ms + kRepeatDelayMs;
             out.source = CommandSource::Button;
-            out.value = 0;
-            if (i == 0) {
-                out.type = CommandType::AdjustFanPercent;
-                out.value = 5;
-            } else if (i == 1) {
-                out.type = CommandType::AdjustFanPercent;
-                out.value = -5;
-            } else {
-                continue;
-            }
+            out.type = CommandType::AdjustFanPercent;
+            out.value = (i == 0) ? kFanStepPercent : -kFanStepPercent;
             return true;
         }
     }

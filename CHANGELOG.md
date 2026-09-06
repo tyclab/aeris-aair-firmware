@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Board
+
+- Up and down repeat while held, 500 ms before the first repeat then every 150 ms, so the
+  full fan range takes about three seconds instead of twenty taps. A tap is unchanged at 5%.
+- State publishes coalesce to at most one burst per 400 ms, so a held button cannot outrun
+  the 24-slot publish queue.
+
 ### Flasher
 
 - Browser flasher at `docs/flasher/`: WebUSB DFU flash of the application, optional Device OS 2.3.1 system parts, and Web Serial provisioning, served from GitHub Pages.

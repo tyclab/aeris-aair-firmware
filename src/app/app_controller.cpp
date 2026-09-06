@@ -21,6 +21,9 @@ const int TFT_RST = -1;
 
 const uint32_t kReportIntervalMs = 5000;
 const uint32_t kHealthPublishIntervalMs = 30000;
+// Auto-repeat can dirty the state every 150 ms; one state burst is ten topics
+// against a queue of 24, so coalesce rather than drop.
+const uint32_t kStatePublishMinIntervalMs = 400;
 const uint32_t kDisplayReinitDelayMs = 2500;
 
 // Filter countdown, stock semantics: wall-clock, decremented and persisted
@@ -57,6 +60,7 @@ AppController::AppController()
       last_filter_decrement_ms_(0),
       last_report_ms_(0),
       last_health_publish_ms_(0),
+      last_state_publish_ms_(0),
       last_sensor_sample_ms_(0),
       wifi_ip_visible_until_ms_(0) {}
 
@@ -117,7 +121,9 @@ void AppController::tick() {
     tickHealthPublish(now_ms);
     tickFilter(now_ms);
 
-    if (state_.dirty_publish) {
+    if (state_.dirty_publish &&
+        now_ms - last_state_publish_ms_ >= kStatePublishMinIntervalMs) {
+        last_state_publish_ms_ = now_ms;
         queueStatePublish();
         state_.dirty_publish = false;
     }

@@ -64,9 +64,10 @@ Date: 2026-02-22
 - Software handling:
   - debounce: `40ms`
   - command triggered on `LOW -> HIGH` only
+  - `D1`/`D2` auto-repeat while held: `500ms` before the first repeat, then every `150ms`
 - Supported operation interface (button to command mapping):
-  - `D1`: `AdjustFanPercent +5`
-  - `D2`: `AdjustFanPercent -5`
+  - `D1`: `AdjustFanPercent +5`, repeating while held
+  - `D2`: `AdjustFanPercent -5`, repeating while held
   - `D3`: short press `ToggleLights`; long press (>=5s) `ToggleWifi`
   - `D4`: short press `TogglePower`; long press (>=8s) `ResetWifiSettings` (clear saved Wi-Fi and reboot)
 

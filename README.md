@@ -139,7 +139,9 @@ belongs to which tentacle and emits per-row RLE. Never hand-edit the header.
 
 ## Buttons
 
-- Up: fan `+5%`. Down: fan `-5%`.
+- Up: fan `+5%`. Down: fan `-5%`. Hold either one and it repeats: after
+  500 ms it steps every 150 ms, so a hold sweeps 0 to 100 in about three
+  seconds while a tap still moves a single 5% step.
 - AirQ: short press toggles the key lights; hold 5 s toggles Wi-Fi.
 - Power: short press toggles the purifier; hold 8 s wipes Wi-Fi and reboots
   into setup mode.
