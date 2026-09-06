@@ -450,6 +450,8 @@ async function askIp() {
     rx = '';
     await send('x'); // leave listening mode; its console owns the same port
     await sleep(300);
+    await send('\n'); // x is unframed, so flush it out of the unit's line buffer
+    await sleep(300);
     await send('IP?\n');
     const match = await waitForRx(/(\d{1,3}(?:\.\d{1,3}){3})/, 8000);
     if (!match) {
