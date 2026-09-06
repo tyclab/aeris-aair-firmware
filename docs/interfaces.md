@@ -37,6 +37,8 @@ Payloads are primitive strings.
 In setup mode the application reads lines on USB serial (any baud except 14400 and 28800, which Device OS reserves for DFU and listening mode):
 - `PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>` saves settings and reboots; replies `PROV OK rebooting` or `PROV ERR <reason>`.
 - `IP?` prints the current IP address.
+- Both are ignored while listening mode is active, because Device OS's own console reads the same port and would consume part of the line. Leave listening mode with `x` first (`w` starts the Wi-Fi wizard, it does not exit).
+- `PROV ERR` reasons: `fields` (not eight tab-separated values), `port` (not 1-65535), `ssid` (empty), `too long` (a field exceeds its stored size), `save` (EEPROM write failed). Fields are never silently truncated.
 
 ## Web API
 Base path on device local IP:

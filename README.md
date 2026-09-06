@@ -126,6 +126,9 @@ PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<
 
 It answers `PROV OK rebooting` or `PROV ERR <reason>`. `IP?` returns the
 current address. `tools/serial_provision.py` sends the line and retries.
+Leave listening mode first with `x`; while it is active Device OS's console
+owns the same port, and the application refuses to parse until it has gone.
+Oversized or empty fields are rejected rather than truncated.
 The SoftAP flow from upstream still works (`Aeris-XXXX`, `192.168.0.1`).
 
 ## Regenerate the gauge

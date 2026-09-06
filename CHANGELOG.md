@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Provisioning
+
+- Serial provisioning refuses to parse while listening mode is active. Device OS's own
+  console reads the same port and would consume part of the `PROV` line.
+- Empty or oversized fields are rejected (`PROV ERR ssid`, `PROV ERR too long`) instead of
+  being silently truncated into a unit that provisions cleanly and never connects.
+- The setup web server no longer pretends to serve the SoftAP interface. `TCPServer::begin()`
+  and `available()` both return early unless `Network.ready()`, which listening mode never
+  satisfies, so the config API is station-only.
+
 ### Board
 
 - Up and down repeat while held, 500 ms before the first repeat then every 150 ms, so the

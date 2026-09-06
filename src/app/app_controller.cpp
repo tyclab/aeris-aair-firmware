@@ -175,10 +175,15 @@ void AppController::tickSensor(uint32_t now_ms) {
 // Setup-mode serial provisioning — the deterministic fallback when the SoftAP
 // TCP stack is dead. One line, tab-separated:
 //   PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>\n
-// Also answers "IP?" with the current local IP. While the system is in
-// listening mode it consumes serial itself, so callers exit listening first
-// (system `w`) — after that the app owns the port.
+// Also answers "IP?" with the current local IP. Listening mode's own console
+// reads the same USB serial and would eat part of the line, so exit it first
+// (system `x`, not `w` — `w` starts the Wi-Fi wizard) and refuse to parse until
+// it has actually gone.
 void AppController::tickSerialProvision() {
+    if (WiFi.listening()) {
+        return;
+    }
+
     while (Serial.available() > 0) {
         char c = static_cast<char>(Serial.read());
         if (c == '\r') {
@@ -217,6 +222,29 @@ void AppController::tickSerialProvision() {
         long port = strtol(fields[3], &end, 10);
         if (end == nullptr || *end != '\0' || port < 1 || port > 65535) {
             Serial.println("PROV ERR port");
+            continue;
+        }
+
+        if (fields[0][0] == '\0') {
+            Serial.println("PROV ERR ssid");
+            continue;
+        }
+        // Silently truncating a passphrase or a broker host produces a unit that
+        // provisions cleanly and then never connects, so refuse instead.
+        const size_t limits[8] = {
+            sizeof(settings_.wifi_ssid), sizeof(settings_.wifi_pass),
+            sizeof(settings_.mqtt_host), 0,
+            sizeof(settings_.mqtt_user), sizeof(settings_.mqtt_pass),
+            sizeof(settings_.mqtt_topic_root), sizeof(settings_.device_id),
+        };
+        bool too_long = false;
+        for (int f = 0; f < 8; ++f) {
+            if (limits[f] != 0 && strlen(fields[f]) >= limits[f]) {
+                too_long = true;
+            }
+        }
+        if (too_long) {
+            Serial.println("PROV ERR too long");
             continue;
         }
 
@@ -276,9 +304,11 @@ void AppController::tickNetwork(uint32_t now_ms) {
 
     if (state_.wifi_enabled) {
         // The system SoftAP HTTP server can come up with its TCP listeners dead
-        // while DHCP/ICMP work; serve the config API from our own TCPServer once
-        // the SoftAP (or, after serial `w` provisioning, the station) is up.
-        if (setup_mode_ && !setup_web_started_ && (WiFi.listening() || state_.wifi_ready)) {
+        // while DHCP/ICMP work, so the config API is served from our own
+        // TCPServer instead. It cannot run on the SoftAP interface: both
+        // TCPServer::begin() and available() return early unless
+        // Network.ready(), which listening mode never satisfies. Station only.
+        if (setup_mode_ && !setup_web_started_ && state_.wifi_ready) {
             web_.begin();
             setup_web_started_ = true;
         }
