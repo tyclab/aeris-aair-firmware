@@ -166,7 +166,7 @@ void WebConfigServer::handleApiStateGet(TCPClient& client) {
         return;
     }
 
-    char json[512];
+    char json[640];
     uint32_t now_ms = millis();
     uint32_t uptime_s = (now_ms - state_->boot_ms) / 1000;
     uint32_t sensor_age_ms = now_ms - state_->last_sensor_packet_ms;
