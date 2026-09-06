@@ -139,7 +139,10 @@ Date: 2026-02-22
 | Button DOWN | `D2` | GPIO in | `ButtonDriver` |
 | Button EXTRA | `D3` | GPIO in | `ButtonDriver` |
 | Button POWER | `D4` | GPIO in | `ButtonDriver` |
-| Display helper control | `D6` | GPIO out | `AppController` |
+| Ring register data | `D5` | GPIO out | `RingDriver` |
+| Ring register clock | `D6` | GPIO out | `RingDriver` |
+| Ring register latch | `D7` | GPIO out | `RingDriver` |
+| Ring boot handshake | `A4` | GPIO out, then released | `RingDriver` |
 | TFT DC | `A0` | SPI control pin | `DisplayDriver` |
 | TFT backlight | `A1` | GPIO out | `DisplayDriver` |
 | TFT CS | `A2` | SPI control pin | `DisplayDriver` |
@@ -209,27 +212,29 @@ control board" does not describe this revision. A QC sticker on the back is tick
 
 ### 6.3 Harness connector
 
-A six-way JST-style header carries the black harness. The silkscreen beside it reads `5V`,
-`GND`, `D0`, `RX`, `TX` and `DAC`. The pin *names* are legible; the pin *order* is not
-readable at this angle and must be confirmed against the board before wiring anything.
+A six-way JST-style header, `P2`, carries the black harness. The bare-board photograph reads
+the silkscreen unambiguously, in order: `+5V`, `GND`, `EN`, `DO`, `RX`, `DAC`. This supersedes
+the 2026-09-04 reading of `5V`, `GND`, `D0`, `RX`, `TX`, `DAC` — there is no `TX` pin, and what
+was read as `TX` is `EN`.
 
-Those names line up with the firmware pin table in section 4, which is the first direct
-evidence that this harness is the Photon interface rather than an internal bus:
-
-| Silkscreen | Firmware use | Confidence |
+| Pin | Silkscreen | Firmware use |
 |---|---|---|
-| `5V`, `GND` | supply | observed |
-| `D0` | fan PWM, `FanDriver` | matches section 4 |
-| `RX`, `TX` | `Serial1`, PM sensor UART, `SensorDriver` | matches section 4 |
-| `DAC` | probably the `A6` sensor wake line | inferred, unverified |
+| 1 | `+5V` | supply |
+| 2 | `GND` | supply |
+| 3 | `EN` | none — see below |
+| 4 | `DO` | `D0`, fan PWM, `FanDriver` |
+| 5 | `RX` | `Serial1` receive, PM sensor data, `SensorDriver` |
+| 6 | `DAC` | `A6`, bit-banged sensor TX, `SensorDriver` |
 
-The bare-board photograph shows the same six names on header `P2` in the order `+5V`, `GND`,
-`EN`, `DO`, `RX`, `DAC`, so the order question in section 7 is answered by silkscreen: the
-harness `D0` is `DO` on the board and sits fourth, and there is an `EN` pin the earlier
-photograph missed.
+`DAC` is the Photon's own name for `A6`, so this is the `PIN_SENSOR_TX` line and no longer an
+inference. It also explains the bit-banging: the harness brings out no hardware UART transmit
+line at all, so `SensorDriver` has to synthesise one on `A6`.
 
-The `DAC` row rests on Particle's pin aliasing, where `A6` is also `DAC2`. It is not a
-measurement. Confirm it before relying on it.
+`EN` is the open question. No firmware pin is named `EN` and nothing in this application drives
+it, which leaves an enable line running into the mainboard that we have never asserted. It is
+the strongest remaining candidate for the dark perimeter ring in 6.2, and it may equally be the
+fan driver's enable currently living on a pull-up. Settle which Photon pin it lands on with a
+meter before theorising further; the unused candidates are `A3`, `A5`, `WKP` and `TX`.
 
 ### 6.4 Particle section and the two buttons
 
@@ -261,7 +266,8 @@ OEM unit is not our application and is not a known-good state.
 
 ## 7. Recommended Next Steps
 
-- Settle the `DAC` to `A6` question in section 6.3 with a meter rather than another photograph.
+- Trace the harness `EN` pin in section 6.3 back to its Photon pin with a meter, then find out
+  what it gates.
 - Use an oscilloscope or logic analyzer to verify the actual sensor model and command set behind `A6` and `Serial1`.
 - Add a wiring diagram showing physical connections between `Particle Photon` and the original board MCU(s) if it is a dual-MCU architecture.
 - Keep this document synchronized with `docs/interfaces.md` whenever topics/API are changed.
