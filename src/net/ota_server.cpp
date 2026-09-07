@@ -84,10 +84,10 @@ bool OtaServer::authenticate(TCPClient& client) {
         return false;
     }
 
-    uint8_t msg[sizeof(settings_->mqtt_pass) + kNonceBytes * 4];
+    uint8_t msg[sizeof(settings_->ota_pass) + kNonceBytes * 4];
     size_t n = 0;
-    size_t pass_len = strnlen(settings_->mqtt_pass, sizeof(settings_->mqtt_pass));
-    memcpy(msg + n, settings_->mqtt_pass, pass_len);
+    size_t pass_len = strnlen(settings_->ota_pass, sizeof(settings_->ota_pass));
+    memcpy(msg + n, settings_->ota_pass, pass_len);
     n += pass_len;
     memcpy(msg + n, nonce_hex, kNonceBytes * 2);
     n += kNonceBytes * 2;

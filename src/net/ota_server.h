@@ -12,7 +12,7 @@
 // The listener only opens for a short window after POST /api/v2/system/update,
 // and the first line on the socket is an ESPHome-style challenge-response:
 // the unit sends a nonce, the client answers sha256(password + nonce + cnonce),
-// the unit's MQTT password being the shared secret. The password never crosses
+// the unit's own ota_pass being the shared secret. The password never crosses
 // the wire, and a wrong answer closes the window, so a stray or hostile
 // connection costs the purifier at most the handshake timeout.
 class OtaServer {

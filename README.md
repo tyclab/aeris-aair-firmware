@@ -73,9 +73,9 @@ make -C device-os/modules/photon/user-part PLATFORM=photon APPDIR=$PWD COMPILE_L
 ```
 
 `/api/v2/state` reports `firmware_version` and `firmware_build`, and the build
-stamp is `__DATE__`/`__TIME__`, so remove `target/` before a build you intend
-to flash — an incremental build can carry an older stamp and misidentify the
-unit later.
+stamp is `__DATE__`/`__TIME__`. The stamped object lives under
+`device-os/build`, not `target/`, so `make` touches its source every run; a
+build always carries its own stamp.
 
 Needs `gcc-arm-none-eabi` 9.x on `PATH`. The Particle libraries are pinned as
 submodules under `lib/` (Adafruit_ST7735_RK 1.10.4 with GFX and BusIO, MQTT
@@ -104,14 +104,15 @@ an OEM unit is not ours. See `docs/hardware-components-and-interfaces.md` 6.4.
 Once a unit runs a build with the update listener, no cable is needed:
 
 ```bash
-MQTT_PASS=… tools/ota.py 10.27.4.209 target/src.bin
+OTA_PASS=… tools/ota.py 10.27.4.209 target/src.bin
 ```
 
 `POST /api/v2/system/update` opens TCP 3232 for 60 s. The unit greets with a
-nonce and the tool answers `sha256(MQTT_PASS + nonce + cnonce)`, the same
-challenge-response ESPHome's OTA uses, with the unit's MQTT password as the
-shared secret; the password never crosses the wire and a wrong answer closes
-the window. Then the tool sends the image by YMODEM to Device OS's own
+nonce and the tool answers `sha256(OTA_PASS + nonce + cnonce)`, the same
+challenge-response ESPHome's OTA uses, with a secret each unit carries in its
+settings (`ota_pass`, set at provisioning or through the settings API, never
+returned); the secret never crosses the wire and a wrong answer closes the
+window. Then the tool sends the image by YMODEM to Device OS's own
 receiver, the one listening mode uses on USB. Device OS checks the module CRC
 and platform before the bootloader swaps it in, so a bad image is refused
 rather than booted. The application loop is blocked for the transfer, a few
@@ -145,10 +146,12 @@ Local: `python3 -m http.server` from `docs/`, then open `/flasher/`.
 In setup mode the application reads one line on USB serial:
 
 ```
-PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>\n
+PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>[\t<ota_pass>]\n
 ```
 
-It answers `PROV OK rebooting` or `PROV ERR <reason>`. `IP?` returns the
+The optional ninth field is the unit's own secret for Wi-Fi updates; without
+it `POST /api/v2/system/update` answers 409 until `ota_pass` is set through
+`POST /api/v2/settings`. It answers `PROV OK rebooting` or `PROV ERR <reason>`. `IP?` returns the
 current address. `tools/serial_provision.py` sends the line and retries.
 Leave listening mode first with `x`; while it is active Device OS's console
 owns the same port, and the application refuses to parse until it has gone.

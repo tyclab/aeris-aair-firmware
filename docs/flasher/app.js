@@ -408,7 +408,10 @@ async function provision() {
     result('every field is required', 'err');
     return;
   }
-  // Carries the Wi-Fi and MQTT passwords: never logged, never echoed into the page.
+  if ($('ota-pass').value !== '') {
+    fields.push($('ota-pass').value); // optional ninth field; without it Wi-Fi updates stay off
+  }
+  // Carries the Wi-Fi, MQTT and update secrets: never logged, never echoed into the page.
   const line = `PROV\t${fields.join('\t')}\n`;
 
   $('provision').disabled = true;

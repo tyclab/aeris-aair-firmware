@@ -14,10 +14,14 @@ All notable changes to this project are documented in this file.
   glow is bleed. MQTT topics and state fields keep the `ring` name.
 
 - Application updates over Wi-Fi: `POST /api/v2/system/update` opens TCP 3232 for 60 s,
-  the unit challenges with a nonce and accepts `sha256(mqtt_pass + nonce + cnonce)`
-  (ESPHome-style, the password never on the wire), then `tools/ota.py` sends the image
+  the unit challenges with a nonce and accepts `sha256(ota_pass + nonce + cnonce)`
+  (ESPHome-style, the secret never on the wire), then `tools/ota.py` sends the image
   by YMODEM. Device OS's own receiver and verification do the work, so nothing new
   writes flash.
+- Settings schema 5 adds `ota_pass`, a per-unit secret set by the ninth `PROV` field,
+  the browser flasher or `POST /api/v2/settings`, and never returned. A schema 4 record
+  is taken over unchanged with the secret unset, so the flash that introduces it keeps
+  Wi-Fi and broker; updates stay refused (409) until the secret is set.
 
 ### Provisioning
 

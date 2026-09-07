@@ -36,12 +36,18 @@ struct PersistentSettings {
     uint16_t fan_color;
     uint16_t pm_label_color;
     uint16_t pm_value_color;
+
+    char ota_pass[32];
 };
 
 static_assert(sizeof(PersistentSettings) == SETTINGS_SCHEMA_LENGTH,
               "Persistent settings schema size changed unexpectedly");
 static_assert(offsetof(PersistentSettings, wifi_ssid) == 12,
               "Persistent settings payload offset must stay stable");
+// ota_pass starts inside schema 4's two zero tail-padding bytes, so a schema 4
+// record is still byte-for-byte the prefix of this layout.
+static_assert(offsetof(PersistentSettings, ota_pass) + 2 == SETTINGS_SCHEMA_V4_LENGTH,
+              "A schema 4 record must be the prefix of a schema 5 record");
 
 int clampInt(int value, int min_v, int max_v) {
     if (value < min_v) {
@@ -74,6 +80,7 @@ void persistentToRuntime(const PersistentSettings& src, SettingsV2& dst) {
     dst.fan_color = src.fan_color;
     dst.pm_label_color = src.pm_label_color;
     dst.pm_value_color = src.pm_value_color;
+    safeCopy(dst.ota_pass, sizeof(dst.ota_pass), src.ota_pass);
 }
 
 void runtimeToPersistent(const SettingsV2& src, PersistentSettings& dst) {
@@ -97,6 +104,7 @@ void runtimeToPersistent(const SettingsV2& src, PersistentSettings& dst) {
     dst.fan_color = src.fan_color;
     dst.pm_label_color = src.pm_label_color;
     dst.pm_value_color = src.pm_value_color;
+    safeCopy(dst.ota_pass, sizeof(dst.ota_pass), src.ota_pass);
 }
 
 uint32_t calculatePersistentCrc(const PersistentSettings& settings) {
@@ -136,6 +144,9 @@ bool validatePersistent(const PersistentSettings& s) {
     if (!hasNullTerminator(s.mqtt_topic_root, sizeof(s.mqtt_topic_root))) {
         return false;
     }
+    if (!hasNullTerminator(s.ota_pass, sizeof(s.ota_pass))) {
+        return false;
+    }
     if (!isDeviceIdTopicSafe(s.device_id, sizeof(s.device_id) - 1)) {
         return false;
     }
@@ -147,6 +158,25 @@ bool validatePersistent(const PersistentSettings& s) {
     }
     return s.crc32 == calculatePersistentCrc(s);
 }
+
+// A schema 4 record is the first SETTINGS_SCHEMA_V4_LENGTH bytes of this
+// layout; taking it over keeps a unit's Wi-Fi and broker across the flash
+// that introduces the update secret, which starts out unset.
+bool upgradeFromV4(PersistentSettings& s) {
+    if (s.magic != SETTINGS_MAGIC || s.version != 4 || s.length != SETTINGS_SCHEMA_V4_LENGTH) {
+        return false;
+    }
+    PersistentSettings copy = s;
+    copy.crc32 = 0;
+    if (s.crc32 != crc32_bytes(reinterpret_cast<const uint8_t*>(&copy), SETTINGS_SCHEMA_V4_LENGTH)) {
+        return false;
+    }
+    memset(s.ota_pass, 0, sizeof(s.ota_pass));
+    s.version = SETTINGS_SCHEMA_VERSION;
+    s.length = sizeof(PersistentSettings);
+    s.crc32 = calculatePersistentCrc(s);
+    return validatePersistent(s);
+}
 }  // namespace
 
 bool SettingsStore::loadOrInitialize(SettingsV2& out) {
@@ -156,6 +186,12 @@ bool SettingsStore::loadOrInitialize(SettingsV2& out) {
     if (validatePersistent(persisted)) {
         persistentToRuntime(persisted, out);
         sanitize(out);
+        return true;
+    }
+    if (upgradeFromV4(persisted)) {
+        persistentToRuntime(persisted, out);
+        sanitize(out);
+        save(out);
         return true;
     }
 
@@ -215,6 +251,7 @@ void SettingsStore::sanitize(SettingsV2& s) {
     s.mqtt_pass[sizeof(s.mqtt_pass) - 1] = '\0';
     s.device_id[sizeof(s.device_id) - 1] = '\0';
     s.mqtt_topic_root[sizeof(s.mqtt_topic_root) - 1] = '\0';
+    s.ota_pass[sizeof(s.ota_pass) - 1] = '\0';
 
     if (!isDeviceIdTopicSafe(s.device_id, sizeof(s.device_id) - 1)) {
         char normalized_id[sizeof(s.device_id)] = {0};

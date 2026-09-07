@@ -179,7 +179,7 @@ void AppController::tickSensor(uint32_t now_ms) {
 
 // Setup-mode serial provisioning — the deterministic fallback when the SoftAP
 // TCP stack is dead. One line, tab-separated:
-//   PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>\n
+//   PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>[\t<ota_pass>]\n
 // Also answers "IP?" with the current local IP. Listening mode's own console
 // reads the same USB serial and would eat part of the line, so exit it first
 // (system `x`, not `w` — `w` starts the Wi-Fi wizard) and refuse to parse until
@@ -214,11 +214,11 @@ void AppController::tickSerialProvision() {
             continue;
         }
 
-        char* fields[8] = {nullptr};
+        char* fields[9] = {nullptr};
         int n = 0;
         char* p = serial_prov_buf_ + 5;
         fields[n++] = p;
-        while (n < 8 && (p = strchr(p, '\t')) != nullptr) {
+        while (n < 9 && (p = strchr(p, '\t')) != nullptr) {
             *p++ = '\0';
             fields[n++] = p;
         }
@@ -245,14 +245,15 @@ void AppController::tickSerialProvision() {
         }
         // Silently truncating a passphrase or a broker host produces a unit that
         // provisions cleanly and then never connects, so refuse instead.
-        const size_t limits[8] = {
+        const size_t limits[9] = {
             sizeof(settings_.wifi_ssid), sizeof(settings_.wifi_pass),
             sizeof(settings_.mqtt_host), 0,
             sizeof(settings_.mqtt_user), sizeof(settings_.mqtt_pass),
             sizeof(settings_.mqtt_topic_root), sizeof(settings_.device_id),
+            sizeof(settings_.ota_pass),
         };
         bool too_long = false;
-        for (int f = 0; f < 8; ++f) {
+        for (int f = 0; f < n; ++f) {
             if (limits[f] != 0 && strlen(fields[f]) >= limits[f]) {
                 too_long = true;
             }
@@ -280,6 +281,9 @@ void AppController::tickSerialProvision() {
         snprintf(settings_.mqtt_pass, sizeof(settings_.mqtt_pass), "%s", fields[5]);
         snprintf(settings_.mqtt_topic_root, sizeof(settings_.mqtt_topic_root), "%s", fields[6]);
         snprintf(settings_.device_id, sizeof(settings_.device_id), "%s", fields[7]);
+        if (n == 9) {
+            snprintf(settings_.ota_pass, sizeof(settings_.ota_pass), "%s", fields[8]);
+        }
         settings_.mqtt_enabled = 1;
 
         settings_store_.sanitize(settings_);

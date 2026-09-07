@@ -5,7 +5,7 @@ Usage:
   serial_provision.py <device_id> <topic_root> <ssid> <mqtt_host> [port] [tty]
 
 Secrets come from the environment so they never land in a shell history:
-  WIFI_PASS, MQTT_USER, MQTT_PASS
+  WIFI_PASS, MQTT_USER, MQTT_PASS, and OTA_PASS for the unit's Wi-Fi update secret
 """
 import os, sys, termios, time
 
@@ -26,8 +26,10 @@ attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
 attrs[4] = attrs[5] = termios.B9600  # anything but 14400 (DFU) / 28800 (listening)
 termios.tcsetattr(fd, termios.TCSANOW, attrs)
 
-prov = "PROV\t" + "\t".join([ssid, wifi_pass, mqtt_host, mqtt_port, mqtt_user, mqtt_pass,
-                             topic_root, device_id]) + "\n"
+fields = [ssid, wifi_pass, mqtt_host, mqtt_port, mqtt_user, mqtt_pass, topic_root, device_id]
+if os.environ.get("OTA_PASS"):
+    fields.append(os.environ["OTA_PASS"])
+prov = "PROV\t" + "\t".join(fields) + "\n"
 
 for attempt in range(1, 6):
     os.write(fd, b"x")  # leave listening mode; its console owns the same port

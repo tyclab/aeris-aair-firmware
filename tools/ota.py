@@ -2,10 +2,10 @@
 """Flash the application over Wi-Fi: arm the unit, answer its challenge, send the image.
 
 Usage:
-  MQTT_PASS=... ota.py <host> <target/src.bin> [port]
+  OTA_PASS=... ota.py <host> <target/src.bin> [port]
 
 POST /api/v2/system/update opens a 60 s listener. The unit sends a nonce; the
-reply is sha256(MQTT_PASS + nonce + cnonce), ESPHome style, so the password
+reply is sha256(OTA_PASS + nonce + cnonce), ESPHome style, so the password
 never crosses the wire. Then Device OS's own YMODEM receiver takes the file,
 verifies it and reboots into it.
 """
@@ -18,7 +18,7 @@ if len(sys.argv) < 3:
 host, path = sys.argv[1:3]
 port = int(sys.argv[3]) if len(sys.argv) > 3 else 3232
 image = open(path, "rb").read()
-password = os.environ.get("MQTT_PASS") or sys.exit("MQTT_PASS missing in the environment")
+password = os.environ.get("OTA_PASS") or sys.exit("OTA_PASS missing in the environment")
 
 
 def crc16(data):
@@ -79,7 +79,7 @@ cnonce = secrets.token_hex(16)
 answer = hashlib.sha256((password + challenge[6:] + cnonce).encode()).hexdigest()
 sock.sendall(f"{cnonce} {answer}\n".encode())
 if read_line(sock, 5) != "ok":
-    sys.exit("unit denied the update: wrong MQTT_PASS")
+    sys.exit("unit denied the update: wrong OTA_PASS")
 
 wait_for(sock, CRC, 15)
 name = os.path.basename(path).encode() + b"\0" + str(len(image)).encode() + b" "

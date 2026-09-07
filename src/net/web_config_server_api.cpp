@@ -119,6 +119,9 @@ void WebConfigServer::handleApiSettingsPost(TCPClient& client, const char* form_
     if (getParam(form_data, "mqtt_pass", value, sizeof(value))) {
         safeCopy(settings_->mqtt_pass, sizeof(settings_->mqtt_pass), value);
     }
+    if (getParam(form_data, "ota_pass", value, sizeof(value))) {
+        safeCopy(settings_->ota_pass, sizeof(settings_->ota_pass), value);
+    }
     if (has_device_id) {
         safeCopy(settings_->device_id, sizeof(settings_->device_id), device_id_candidate);
     }
@@ -299,6 +302,10 @@ void WebConfigServer::handleApiSystemDfu(TCPClient& client) {
 }
 
 void WebConfigServer::handleApiSystemUpdate(TCPClient& client) {
+    if (settings_->ota_pass[0] == '\0') {
+        respond(client, 409, "application/json", "{\"ok\":false,\"error\":\"ota_pass_unset\"}");
+        return;
+    }
     pushCommand(CommandType::ArmUpdate, 0, CommandSource::Web);
     respond(client, 200, "application/json",
             "{\"ok\":true,\"action\":\"update\",\"port\":3232,\"window_s\":60}");
