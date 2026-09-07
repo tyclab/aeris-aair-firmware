@@ -33,6 +33,8 @@ struct DeviceState {
     uint32_t command_drop_mqtt_count;
     uint32_t command_drop_web_count;
     uint32_t mqtt_publish_drop_count;
+    uint32_t ota_denied_count;
+    bool ota_locked;
 
     bool dirty_display;
     bool dirty_publish;
@@ -65,6 +67,8 @@ inline void initDeviceState(DeviceState& state, uint32_t now_ms) {
     state.command_drop_mqtt_count = 0;
     state.command_drop_web_count = 0;
     state.mqtt_publish_drop_count = 0;
+    state.ota_denied_count = 0;
+    state.ota_locked = false;
     state.dirty_display = true;
     state.dirty_publish = true;
 }

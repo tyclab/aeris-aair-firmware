@@ -409,6 +409,10 @@ async function provision() {
     return;
   }
   if ($('ota-pass').value !== '') {
+    if ($('ota-pass').value.length < 16) {
+      result('the update secret needs at least 16 characters', 'err');
+      return;
+    }
     fields.push($('ota-pass').value); // optional ninth field; without it Wi-Fi updates stay off
   }
   // Carries the Wi-Fi, MQTT and update secrets: never logged, never echoed into the page.

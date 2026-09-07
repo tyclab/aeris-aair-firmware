@@ -28,6 +28,7 @@ Root: `aeris/v2/<device_id>`
 - `aeris/v2/<device_id>/health/wifi_reconnect_count`
 - `aeris/v2/<device_id>/health/mqtt_reconnect_count`
 - `aeris/v2/<device_id>/health/mqtt_publish_drop_count`
+- `aeris/v2/<device_id>/health/ota_denied_count`
 - `aeris/v2/<device_id>/health/sensor_parse_errors`
 - `aeris/v2/<device_id>/health/command_drop_{button,mqtt,web}_count`
 
@@ -38,18 +39,18 @@ In setup mode the application reads lines on USB serial (any baud except 14400 a
 - `PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>[\t<ota_pass>]` saves settings and reboots; replies `PROV OK rebooting` or `PROV ERR <reason>`.
 - `IP?` prints the current IP address.
 - Both are ignored while listening mode is active, because Device OS's own console reads the same port and would consume part of the line. Leave listening mode with `x` first (`w` starts the Wi-Fi wizard, it does not exit).
-- `PROV ERR` reasons: `fields` (fewer than eight tab-separated values; a ninth, `ota_pass`, is optional), `port` (not 1-65535), `ssid` (empty), `host` (empty), `too long` (a field exceeds its stored size), `device_id` (not alphanumeric/`_`/`-`), `topic_root` (not slash-separated alphanumeric/`_`/`-` segments), `save` (EEPROM write failed). Fields are never silently truncated or normalised.
+- `PROV ERR` reasons: `fields` (fewer than eight tab-separated values; a ninth, `ota_pass`, is optional and cleared when absent), `ota_pass` (shorter than 16 characters), `port` (not 1-65535), `ssid` (empty), `host` (empty), `too long` (a field exceeds its stored size), `device_id` (not alphanumeric/`_`/`-`), `topic_root` (not slash-separated alphanumeric/`_`/`-` segments), `save` (EEPROM write failed). Fields are never silently truncated or normalised.
 
 ## Web API
 Base path on device local IP:
 - `GET /` serves the built-in Web UI dashboard.
 - `GET /api/v2/settings` returns current settings JSON (without secret redaction logic).
-- `POST /api/v2/settings` with urlencoded form updates settings (`wifi_ssid`, `wifi_pass`, `mqtt_host`, `mqtt_user`, `mqtt_pass`, `device_id`, `mqtt_topic_root`, `ota_pass`, display fields). Secrets are accepted, never returned.
+- `POST /api/v2/settings` with urlencoded form updates settings (`wifi_ssid`, `wifi_pass`, `mqtt_host`, `mqtt_user`, `mqtt_pass`, `device_id`, `mqtt_topic_root`, display fields). Secrets are accepted, never returned; `ota_pass` is not accepted here, only over USB `PROV`.
 - `GET /api/v2/state` returns live runtime state (`pm25`, `pm10`, fan, connectivity, `screen_light_on`), plus `firmware_version` and `firmware_build`, which is the compile timestamp and so only truthful after a clean build.
 - `POST /api/v2/control` with urlencoded form sends runtime commands (`fan_percent`, `lights`, `screen_light`).
 - `POST /api/v2/system/reboot` requests reboot.
 - `POST /api/v2/system/dfu` requests DFU mode.
-- `POST /api/v2/system/update` opens TCP 3232 for 60 s. The unit sends `nonce=<32 hex>`; the client answers `<cnonce 32 hex> <sha256(ota_pass + nonce + cnonce) hex>` and gets `ok` or `denied`. With `ota_pass` unset the POST answers 409 and nothing listens. After `ok` the socket is Device OS's YMODEM receiver; `tools/ota.py` does all of it and the unit reboots into the verified image.
+- `POST /api/v2/system/update` opens TCP 3232 for 60 s. The unit sends `nonce=<32 hex>`; the client answers `<cnonce 32 hex> <sha256(ota_pass + nonce + cnonce) hex>` and gets `ok` or `denied`. With `ota_pass` unset the POST answers 409; after three wrong answers it answers 423 until reboot, and `health/ota_denied_count` counts every wrong answer. A connection that never answers is dropped after 500 ms, uncounted. After `ok` the socket is Device OS's YMODEM receiver; `tools/ota.py` does all of it and the unit reboots into the verified image.
 
 Validation failures return HTTP 400 with JSON body.
 

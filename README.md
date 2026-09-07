@@ -110,9 +110,11 @@ OTA_PASS=… tools/ota.py 10.27.4.209 target/src.bin
 `POST /api/v2/system/update` opens TCP 3232 for 60 s. The unit greets with a
 nonce and the tool answers `sha256(OTA_PASS + nonce + cnonce)`, the same
 challenge-response ESPHome's OTA uses, with a secret each unit carries in its
-settings (`ota_pass`, set at provisioning or through the settings API, never
-returned); the secret never crosses the wire and a wrong answer closes the
-window. Then the tool sends the image by YMODEM to Device OS's own
+settings (`ota_pass`, set over USB at provisioning, never over the network,
+never returned); the secret never crosses the wire, and three wrong answers
+lock the listener until reboot. The receiver is the same one listening mode
+uses on USB, so a valid secret can also deliver system parts or a bootloader;
+treat it accordingly. Then the tool sends the image by YMODEM to Device OS's own
 receiver, the one listening mode uses on USB. Device OS checks the module CRC
 and platform before the bootloader swaps it in, so a bad image is refused
 rather than booted. The application loop is blocked for the transfer, a few
@@ -149,9 +151,9 @@ In setup mode the application reads one line on USB serial:
 PROV\t<ssid>\t<wifi_pass>\t<mqtt_host>\t<mqtt_port>\t<mqtt_user>\t<mqtt_pass>\t<topic_root>\t<device_id>[\t<ota_pass>]\n
 ```
 
-The optional ninth field is the unit's own secret for Wi-Fi updates; without
-it `POST /api/v2/system/update` answers 409 until `ota_pass` is set through
-`POST /api/v2/settings`. It answers `PROV OK rebooting` or `PROV ERR <reason>`. `IP?` returns the
+The optional ninth field (16+ characters) is the unit's own secret for Wi-Fi
+updates. It is set over USB only, never over the network, and never read
+back; without it `POST /api/v2/system/update` answers 409. It answers `PROV OK rebooting` or `PROV ERR <reason>`. `IP?` returns the
 current address. `tools/serial_provision.py` sends the line and retries.
 Leave listening mode first with `x`; while it is active Device OS's console
 owns the same port, and the application refuses to parse until it has gone.

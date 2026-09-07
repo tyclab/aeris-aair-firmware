@@ -9,7 +9,7 @@ reply is sha256(OTA_PASS + nonce + cnonce), ESPHome style, so the password
 never crosses the wire. Then Device OS's own YMODEM receiver takes the file,
 verifies it and reboots into it.
 """
-import hashlib, json, os, secrets, socket, sys, time, urllib.request
+import hashlib, json, os, secrets, socket, sys, time, urllib.error, urllib.request
 
 SOH, STX, EOT, ACK, NAK, CA, CRC = b"\x01", b"\x02", b"\x04", b"\x06", b"\x15", b"\x18", b"C"
 
@@ -57,8 +57,11 @@ def wait_for(sock, wanted, timeout):
         text += c  # the receiver prints its verdict as text
 
 
-with urllib.request.urlopen(f"http://{host}/api/v2/system/update", data=b"") as r:
-    arm = json.load(r)
+try:
+    with urllib.request.urlopen(f"http://{host}/api/v2/system/update", data=b"") as r:
+        arm = json.load(r)
+except urllib.error.HTTPError as e:  # 409 no secret on the unit, 423 locked until reboot
+    sys.exit(f"unit refused to arm: {e.code} {e.read().decode(errors='replace')}")
 if not arm.get("ok"):
     sys.exit(f"arm failed: {arm}")
 

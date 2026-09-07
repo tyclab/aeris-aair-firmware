@@ -272,6 +272,12 @@ void AppController::tickSerialProvision() {
             Serial.println("PROV ERR topic_root");
             continue;
         }
+        // The secret is guessed online at TCP round-trip rate; three misses
+        // lock the unit, but a short one still deserves refusing here.
+        if (n == 9 && strlen(fields[8]) < 16) {
+            Serial.println("PROV ERR ota_pass");
+            continue;
+        }
 
         snprintf(settings_.wifi_ssid, sizeof(settings_.wifi_ssid), "%s", fields[0]);
         snprintf(settings_.wifi_pass, sizeof(settings_.wifi_pass), "%s", fields[1]);
@@ -281,8 +287,12 @@ void AppController::tickSerialProvision() {
         snprintf(settings_.mqtt_pass, sizeof(settings_.mqtt_pass), "%s", fields[5]);
         snprintf(settings_.mqtt_topic_root, sizeof(settings_.mqtt_topic_root), "%s", fields[6]);
         snprintf(settings_.device_id, sizeof(settings_.device_id), "%s", fields[7]);
+        // A PROV line is the whole provisioning: without a ninth field the unit
+        // has no update secret, it does not keep a previous owner's.
         if (n == 9) {
             snprintf(settings_.ota_pass, sizeof(settings_.ota_pass), "%s", fields[8]);
+        } else {
+            settings_.ota_pass[0] = '\0';
         }
         settings_.mqtt_enabled = 1;
 
@@ -346,6 +356,8 @@ void AppController::tickNetwork(uint32_t now_ms) {
         if (state_.wifi_ready) {
             ota_.tick(now_ms);
         }
+        state_.ota_denied_count = ota_.deniedCount();
+        state_.ota_locked = ota_.locked();
     }
 
     if (state_.wifi_enabled) {
@@ -405,6 +417,7 @@ void AppController::tickHealthPublish(uint32_t now_ms) {
         mqtt_.enqueueStatePublish("health/command_drop_mqtt_count", state_.command_drop_mqtt_count);
         mqtt_.enqueueStatePublish("health/command_drop_web_count", state_.command_drop_web_count);
         mqtt_.enqueueStatePublish("health/mqtt_publish_drop_count", state_.mqtt_publish_drop_count);
+        mqtt_.enqueueStatePublish("health/ota_denied_count", state_.ota_denied_count);
     }
 }
 

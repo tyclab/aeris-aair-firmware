@@ -19,13 +19,25 @@ void toHex(const uint8_t* in, size_t len, char* out) {
 }  // namespace
 
 OtaServer::OtaServer(int port, const SettingsV2* settings)
-    : server_(port), settings_(settings), window_until_ms_(0), listening_(false) {}
+    : server_(port),
+      settings_(settings),
+      window_until_ms_(0),
+      listening_(false),
+      pending_since_ms_(0),
+      fail_streak_(0),
+      denied_count_(0) {
+    memset(nonce_hex_, 0, sizeof(nonce_hex_));
+}
 
-void OtaServer::arm(uint32_t now_ms) {
+bool OtaServer::arm(uint32_t now_ms) {
+    if (locked()) {
+        return false;
+    }
     window_until_ms_ = now_ms + kWindowMs;
     if (!listening_) {
         listening_ = server_.begin();
     }
+    return listening_;
 }
 
 void OtaServer::tick(uint32_t now_ms) {
@@ -33,54 +45,79 @@ void OtaServer::tick(uint32_t now_ms) {
         return;
     }
     if (static_cast<int32_t>(now_ms - window_until_ms_) >= 0) {
-        server_.stop();
-        listening_ = false;
+        close();
         return;
     }
-    TCPClient client = server_.available();
-    if (!client.connected()) {
+
+    if (!pending_.connected()) {
+        pending_ = server_.available();
+        if (!pending_.connected()) {
+            return;
+        }
+        pending_since_ms_ = now_ms;
+        sendChallenge(pending_);
         return;
     }
-    // One connection per window, right or wrong; a retry needs a new arm.
-    listening_ = false;
-    if (authenticate(client)) {
-        client.println("ok");
+
+    if (pending_.available() <= 0) {
+        if (now_ms - pending_since_ms_ >= kHandshakeMs) {
+            pending_.stop();  // never answered: not a guess, not counted
+        }
+        return;
+    }
+
+    char line[160];
+    bool ok = readLine(pending_, line, sizeof(line), now_ms + kHandshakeMs) && verify(line);
+    if (ok) {
+        fail_streak_ = 0;
+        pending_.println("ok");
         // Success reboots from inside firmwareUpdate(); failure returns here.
-        System.firmwareUpdate(&client);
-    } else {
-        client.println("denied");
+        System.firmwareUpdate(&pending_);
+        close();
+        return;
     }
-    client.stop();
+    denied_count_ += 1;
+    fail_streak_ += 1;
+    pending_.println("denied");
+    pending_.stop();
+    if (locked()) {
+        close();
+    }
+}
+
+bool OtaServer::locked() const {
+    return fail_streak_ >= kMaxDenied;
+}
+
+uint32_t OtaServer::deniedCount() const {
+    return denied_count_;
+}
+
+void OtaServer::close() {
+    pending_.stop();
     server_.stop();
+    listening_ = false;
 }
 
-bool OtaServer::armed() const {
-    return listening_;
-}
-
-bool OtaServer::authenticate(TCPClient& client) {
+void OtaServer::sendChallenge(TCPClient& client) {
     uint8_t nonce[kNonceBytes];
     for (size_t i = 0; i < kNonceBytes; i += 4) {
         uint32_t r = HAL_RNG_GetRandomNumber();
         memcpy(nonce + i, &r, 4);
     }
-    char nonce_hex[kNonceBytes * 2 + 1];
-    toHex(nonce, kNonceBytes, nonce_hex);
-    client.printf("nonce=%s\n", nonce_hex);
+    toHex(nonce, kNonceBytes, nonce_hex_);
+    client.printf("nonce=%s\n", nonce_hex_);
+}
 
-    // "<cnonce hex> <sha256 hex>"
-    char line[160];
-    if (!readLine(client, line, sizeof(line), millis() + kHandshakeMs)) {
-        return false;
-    }
-    char* space = strchr(line, ' ');
+// "<cnonce hex> <sha256 hex>"
+bool OtaServer::verify(const char* line) const {
+    const char* space = strchr(line, ' ');
     if (space == nullptr) {
         return false;
     }
-    *space = '\0';
-    const char* cnonce = line;
+    size_t cnonce_len = static_cast<size_t>(space - line);
     const char* answer = space + 1;
-    if (strlen(cnonce) != kNonceBytes * 2 || strlen(answer) != 64) {
+    if (cnonce_len != kNonceBytes * 2 || strlen(answer) != 64) {
         return false;
     }
 
@@ -89,9 +126,9 @@ bool OtaServer::authenticate(TCPClient& client) {
     size_t pass_len = strnlen(settings_->ota_pass, sizeof(settings_->ota_pass));
     memcpy(msg + n, settings_->ota_pass, pass_len);
     n += pass_len;
-    memcpy(msg + n, nonce_hex, kNonceBytes * 2);
+    memcpy(msg + n, nonce_hex_, kNonceBytes * 2);
     n += kNonceBytes * 2;
-    memcpy(msg + n, cnonce, kNonceBytes * 2);
+    memcpy(msg + n, line, kNonceBytes * 2);
     n += kNonceBytes * 2;
 
     uint8_t digest[32];

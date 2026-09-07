@@ -2,3 +2,4 @@
 !docs/flasher/firmware/*.bin
 target/
 tasks/
+__pycache__/

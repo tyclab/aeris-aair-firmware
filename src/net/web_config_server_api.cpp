@@ -119,9 +119,6 @@ void WebConfigServer::handleApiSettingsPost(TCPClient& client, const char* form_
     if (getParam(form_data, "mqtt_pass", value, sizeof(value))) {
         safeCopy(settings_->mqtt_pass, sizeof(settings_->mqtt_pass), value);
     }
-    if (getParam(form_data, "ota_pass", value, sizeof(value))) {
-        safeCopy(settings_->ota_pass, sizeof(settings_->ota_pass), value);
-    }
     if (has_device_id) {
         safeCopy(settings_->device_id, sizeof(settings_->device_id), device_id_candidate);
     }
@@ -302,8 +299,14 @@ void WebConfigServer::handleApiSystemDfu(TCPClient& client) {
 }
 
 void WebConfigServer::handleApiSystemUpdate(TCPClient& client) {
+    // ota_pass is set over USB only (PROV); a network write would let any peer
+    // choose the secret the handshake checks.
     if (settings_->ota_pass[0] == '\0') {
         respond(client, 409, "application/json", "{\"ok\":false,\"error\":\"ota_pass_unset\"}");
+        return;
+    }
+    if (state_->ota_locked) {
+        respond(client, 423, "application/json", "{\"ok\":false,\"error\":\"locked_until_reboot\"}");
         return;
     }
     pushCommand(CommandType::ArmUpdate, 0, CommandSource::Web);

@@ -5,7 +5,8 @@ Usage:
   serial_provision.py <device_id> <topic_root> <ssid> <mqtt_host> [port] [tty]
 
 Secrets come from the environment so they never land in a shell history:
-  WIFI_PASS, MQTT_USER, MQTT_PASS, and OTA_PASS for the unit's Wi-Fi update secret
+  WIFI_PASS, MQTT_USER, MQTT_PASS, and OTA_PASS (16+ chars) for the unit's Wi-Fi update
+  secret; without it the unit has none and Wi-Fi updates stay off
 """
 import os, sys, termios, time
 
