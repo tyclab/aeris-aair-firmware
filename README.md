@@ -40,7 +40,7 @@ Interfaces added on top of upstream v2 (`aeris/v2/<device_id>/...`, see
 | Command topic         | Payload                   | State topic             |
 | --------------------- | ------------------------- | ----------------------- |
 | `cmd/ring`            | pattern byte `0..255`     | `state/ring`            |
-| `cmd/ring_brightness` | `0..4`                    | `state/ring_brightness` |
+| `cmd/ring_brightness` | percent `0..100`, 5 steps | `state/ring_brightness` |
 | `cmd/ring_blink`      | half period ms, `0` solid | `state/ring_blink`      |
 | `cmd/status_led`      | `0` or `1`                | `state/status_led`      |
 | `cmd/filter_days`     | days remaining            | `sensor/filter_minutes` |
