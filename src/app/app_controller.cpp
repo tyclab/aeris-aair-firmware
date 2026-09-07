@@ -40,6 +40,16 @@ struct FilterRecord {
     uint32_t magic;
     uint32_t minutes;
 };
+
+// Wrong OTA answers, kept across the reboot that clears the lock so the
+// evidence of a guessing run survives it.
+const int kEepromAddrOtaDenied = 520;
+const uint32_t kOtaDeniedMagic = 0x4F544144UL;  // 'OTAD'
+
+struct OtaDeniedRecord {
+    uint32_t magic;
+    uint32_t count;
+};
 }  // namespace
 
 AppController::AppController()
@@ -80,6 +90,7 @@ void AppController::init() {
     initDeviceState(state_, millis());
     settings_store_.loadOrInitialize(settings_);
     loadFilterState();
+    loadOtaDenied();
 
     fan_.init();
     display_.init();
@@ -322,6 +333,17 @@ void AppController::saveFilterState() {
     EEPROM.put(kEepromAddrFilter, rec);
 }
 
+void AppController::loadOtaDenied() {
+    OtaDeniedRecord rec;
+    EEPROM.get(kEepromAddrOtaDenied, rec);
+    ota_.setDeniedCount((rec.magic == kOtaDeniedMagic) ? rec.count : 0);
+}
+
+void AppController::saveOtaDenied() {
+    OtaDeniedRecord rec = {kOtaDeniedMagic, state_.ota_denied_count};
+    EEPROM.put(kEepromAddrOtaDenied, rec);
+}
+
 void AppController::tickFilter(uint32_t now_ms) {
     if (now_ms - last_filter_decrement_ms_ < kFilterTickMs) {
         return;
@@ -356,7 +378,10 @@ void AppController::tickNetwork(uint32_t now_ms) {
         if (state_.wifi_ready) {
             ota_.tick(now_ms);
         }
-        state_.ota_denied_count = ota_.deniedCount();
+        if (state_.ota_denied_count != ota_.deniedCount()) {
+            state_.ota_denied_count = ota_.deniedCount();
+            saveOtaDenied();
+        }
         state_.ota_locked = ota_.locked();
     }
 

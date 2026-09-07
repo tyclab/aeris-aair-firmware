@@ -50,7 +50,7 @@ Base path on device local IP:
 - `POST /api/v2/control` with urlencoded form sends runtime commands (`fan_percent`, `lights`, `screen_light`).
 - `POST /api/v2/system/reboot` requests reboot.
 - `POST /api/v2/system/dfu` requests DFU mode.
-- `POST /api/v2/system/update` opens TCP 3232 for 60 s. The unit sends `nonce=<32 hex>`; the client answers `<cnonce 32 hex> <sha256(ota_pass + nonce + cnonce) hex>` and gets `ok` or `denied`. With `ota_pass` unset the POST answers 409; after three wrong answers it answers 423 until reboot, and `health/ota_denied_count` counts every wrong answer. A connection that never answers is dropped after 500 ms, uncounted. After `ok` the socket is Device OS's YMODEM receiver; `tools/ota.py` does all of it and the unit reboots into the verified image.
+- `POST /api/v2/system/update` opens TCP 3232 for 60 s. The unit sends `nonce=<32 hex>`; the client answers `<cnonce 32 hex> <sha256(ota_pass + nonce + cnonce) hex>` and gets `ok` or `denied`. With `ota_pass` unset the POST answers 409; after three well-formed wrong answers it answers 423 until reboot, and `health/ota_denied_count` counts every wrong answer, persisted across reboots. A connection that stays silent for 500 ms or sends a malformed line is dropped uncounted. After `ok` the socket is Device OS's YMODEM receiver; `tools/ota.py` does all of it and the unit reboots into the verified image.
 
 Validation failures return HTTP 400 with JSON body.
 

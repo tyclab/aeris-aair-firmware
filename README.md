@@ -112,7 +112,8 @@ nonce and the tool answers `sha256(OTA_PASS + nonce + cnonce)`, the same
 challenge-response ESPHome's OTA uses, with a secret each unit carries in its
 settings (`ota_pass`, set over USB at provisioning, never over the network,
 never returned); the secret never crosses the wire, and three wrong answers
-lock the listener until reboot. The receiver is the same one listening mode
+lock the listener until reboot, counted on `health/ota_denied_count` across
+reboots. The receiver is the same one listening mode
 uses on USB, so a valid secret can also deliver system parts or a bootloader;
 treat it accordingly. Then the tool sends the image by YMODEM to Device OS's own
 receiver, the one listening mode uses on USB. Device OS checks the module CRC

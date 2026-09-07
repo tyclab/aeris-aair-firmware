@@ -17,9 +17,9 @@ All notable changes to this project are documented in this file.
   the unit challenges with a nonce and accepts `sha256(ota_pass + nonce + cnonce)`
   (ESPHome-style, the secret never on the wire), then `tools/ota.py` sends the image
   by YMODEM. Device OS's own receiver and verification do the work, so nothing new
-  writes flash. Three wrong answers lock the listener until reboot (423 on arm),
-  `health/ota_denied_count` counts them, and a connection that never answers is dropped
-  after 500 ms without counting.
+  writes flash. Three well-formed wrong answers lock the listener until reboot (423 on arm);
+  `health/ota_denied_count` counts them and survives the reboot; a connection that stays
+  silent or sends junk is dropped without counting.
 - Settings schema 5 adds `ota_pass`, a per-unit secret (16+ characters) set over USB only,
   by the ninth `PROV` field or the browser flasher, cleared by a `PROV` line without it, and
   never returned or accepted over the network. A schema 4 record

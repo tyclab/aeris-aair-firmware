@@ -16,6 +16,17 @@ void toHex(const uint8_t* in, size_t len, char* out) {
     }
     out[len * 2] = '\0';
 }
+
+bool isHex(const char* s, size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        char c = s[i];
+        bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+        if (!ok) {
+            return false;
+        }
+    }
+    return true;
+}
 }  // namespace
 
 OtaServer::OtaServer(int port, const SettingsV2* settings)
@@ -24,9 +35,11 @@ OtaServer::OtaServer(int port, const SettingsV2* settings)
       window_until_ms_(0),
       listening_(false),
       pending_since_ms_(0),
+      line_len_(0),
       fail_streak_(0),
       denied_count_(0) {
     memset(nonce_hex_, 0, sizeof(nonce_hex_));
+    memset(line_, 0, sizeof(line_));
 }
 
 bool OtaServer::arm(uint32_t now_ms) {
@@ -55,33 +68,36 @@ void OtaServer::tick(uint32_t now_ms) {
             return;
         }
         pending_since_ms_ = now_ms;
+        line_len_ = 0;
         sendChallenge(pending_);
         return;
     }
 
-    if (pending_.available() <= 0) {
-        if (now_ms - pending_since_ms_ >= kHandshakeMs) {
-            pending_.stop();  // never answered: not a guess, not counted
-        }
-        return;
-    }
-
-    char line[160];
-    bool ok = readLine(pending_, line, sizeof(line), now_ms + kHandshakeMs) && verify(line);
-    if (ok) {
-        fail_streak_ = 0;
-        pending_.println("ok");
-        // Success reboots from inside firmwareUpdate(); failure returns here.
-        System.firmwareUpdate(&pending_);
-        close();
-        return;
-    }
-    denied_count_ += 1;
-    fail_streak_ += 1;
-    pending_.println("denied");
-    pending_.stop();
-    if (locked()) {
-        close();
+    switch (readAnswer()) {
+        case Answer::Incomplete:
+            if (now_ms - pending_since_ms_ >= kHandshakeMs) {
+                dropPending();  // silent or dawdling: not a guess, not counted
+            }
+            return;
+        case Answer::Malformed:
+            dropPending();  // junk is not a guess either
+            return;
+        case Answer::Wrong:
+            denied_count_ += 1;
+            fail_streak_ += 1;
+            pending_.println("denied");
+            dropPending();
+            if (locked()) {
+                close();
+            }
+            return;
+        case Answer::Right:
+            fail_streak_ = 0;
+            pending_.println("ok");
+            // Success reboots from inside firmwareUpdate(); failure returns here.
+            System.firmwareUpdate(&pending_);
+            close();
+            return;
     }
 }
 
@@ -93,10 +109,19 @@ uint32_t OtaServer::deniedCount() const {
     return denied_count_;
 }
 
+void OtaServer::setDeniedCount(uint32_t count) {
+    denied_count_ = count;
+}
+
 void OtaServer::close() {
-    pending_.stop();
+    dropPending();
     server_.stop();
     listening_ = false;
+}
+
+void OtaServer::dropPending() {
+    pending_.stop();
+    line_len_ = 0;
 }
 
 void OtaServer::sendChallenge(TCPClient& client) {
@@ -109,16 +134,40 @@ void OtaServer::sendChallenge(TCPClient& client) {
     client.printf("nonce=%s\n", nonce_hex_);
 }
 
-// "<cnonce hex> <sha256 hex>"
-bool OtaServer::verify(const char* line) const {
+// Consumes only what has already arrived; a line spans ticks if it has to.
+OtaServer::Answer OtaServer::readAnswer() {
+    while (pending_.available() > 0) {
+        int c = pending_.read();
+        if (c < 0) {
+            break;
+        }
+        if (c == '\n') {
+            line_[line_len_] = '\0';
+            line_len_ = 0;
+            return judge(line_);
+        }
+        if (c == '\r') {
+            continue;
+        }
+        if (line_len_ + 1 >= sizeof(line_)) {
+            return Answer::Malformed;
+        }
+        line_[line_len_++] = static_cast<char>(c);
+    }
+    return Answer::Incomplete;
+}
+
+// "<cnonce hex> <sha256 hex>"; only a well-formed answer counts as a guess.
+OtaServer::Answer OtaServer::judge(const char* line) const {
     const char* space = strchr(line, ' ');
     if (space == nullptr) {
-        return false;
+        return Answer::Malformed;
     }
     size_t cnonce_len = static_cast<size_t>(space - line);
     const char* answer = space + 1;
-    if (cnonce_len != kNonceBytes * 2 || strlen(answer) != 64) {
-        return false;
+    if (cnonce_len != kNonceBytes * 2 || strlen(answer) != 64 ||
+        !isHex(line, cnonce_len) || !isHex(answer, 64)) {
+        return Answer::Malformed;
     }
 
     uint8_t msg[sizeof(settings_->ota_pass) + kNonceBytes * 4];
@@ -140,26 +189,5 @@ bool OtaServer::verify(const char* line) const {
     for (size_t i = 0; i < 64; ++i) {
         diff |= static_cast<uint8_t>(expected[i] ^ answer[i]);
     }
-    return pass_len > 0 && diff == 0;
-}
-
-bool OtaServer::readLine(TCPClient& client, char* buf, size_t size, uint32_t deadline_ms) {
-    size_t len = 0;
-    while (static_cast<int32_t>(millis() - deadline_ms) < 0 && client.connected()) {
-        int c = client.read();
-        if (c < 0) {
-            continue;
-        }
-        if (c == '\n') {
-            buf[len] = '\0';
-            return true;
-        }
-        if (c != '\r') {
-            if (len + 1 >= size) {
-                return false;
-            }
-            buf[len++] = static_cast<char>(c);
-        }
-    }
-    return false;
+    return (pass_len > 0 && diff == 0) ? Answer::Right : Answer::Wrong;
 }

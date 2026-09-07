@@ -305,7 +305,7 @@ void WebConfigServer::handleApiSystemUpdate(TCPClient& client) {
         respond(client, 409, "application/json", "{\"ok\":false,\"error\":\"ota_pass_unset\"}");
         return;
     }
-    if (state_->ota_locked) {
+    if (state_ != nullptr && state_->ota_locked) {
         respond(client, 423, "application/json", "{\"ok\":false,\"error\":\"locked_until_reboot\"}");
         return;
     }

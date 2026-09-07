@@ -62,6 +62,8 @@ private:
     void keyLightTimerTick();
     void loadFilterState();
     void saveFilterState();
+    void loadOtaDenied();
+    void saveOtaDenied();
     void tickFilter(uint32_t now_ms);
 
     bool setup_mode_;
