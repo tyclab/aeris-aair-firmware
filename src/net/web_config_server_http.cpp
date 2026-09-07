@@ -195,6 +195,10 @@ void WebConfigServer::handleClient(TCPClient& client) {
         handleApiSystemDfu(client);
         return;
     }
+    if (strcmp(method, "POST") == 0 && strcmp(path, "/api/v2/system/update") == 0) {
+        handleApiSystemUpdate(client);
+        return;
+    }
     if (strcmp(method, "GET") == 0 && (strcmp(path, "/") == 0 || strcmp(path, "/index.html") == 0)) {
         respond(client, 200, "text/html", webUiIndexHtml());
         return;

@@ -12,6 +12,7 @@
 #include "../drivers/key_light_driver.h"
 #include "../drivers/sensor_driver.h"
 #include "../net/mqtt_client.h"
+#include "../net/ota_server.h"
 #include "../net/web_config_server.h"
 #include "../net/wifi_manager.h"
 #include "../util/moving_average.h"
@@ -47,6 +48,7 @@ private:
     WifiManager wifi_;
     MqttClient mqtt_;
     WebConfigServer web_;
+    OtaServer ota_;
     CommandRouter command_router_;
 
     MovingAverage<int, 10> pm25_avg_;

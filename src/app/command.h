@@ -24,6 +24,7 @@ enum class CommandType : uint8_t {
     ResetWifiSettings,
     Reboot,
     EnterDfu,
+    ArmUpdate,
 };
 
 struct Command {

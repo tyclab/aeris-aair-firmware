@@ -50,6 +50,7 @@ AppController::AppController()
       sensor_(PIN_SENSOR_TX),
       key_light_timer_(1, &AppController::keyLightTimerTick, *this),
       web_(80),
+      ota_(3232),
       q_head_(0),
       q_tail_(0),
       setup_mode_(false),
@@ -338,6 +339,9 @@ void AppController::tickNetwork(uint32_t now_ms) {
             setup_web_started_ = true;
         }
         web_.tick();
+        if (state_.wifi_ready) {
+            ota_.tick(now_ms);
+        }
     }
 
     if (state_.wifi_enabled) {
@@ -505,6 +509,10 @@ void AppController::applyCommand(const Command& cmd) {
         state_.filter_minutes = static_cast<uint32_t>(cmd.value) * 1440UL;
         saveFilterState();
         state_.dirty_publish = true;
+        return;
+    }
+    if (cmd.type == CommandType::ArmUpdate) {
+        ota_.arm(millis());
         return;
     }
     if (cmd.type == CommandType::SetStatusLed) {

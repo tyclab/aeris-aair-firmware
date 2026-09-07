@@ -298,6 +298,12 @@ void WebConfigServer::handleApiSystemDfu(TCPClient& client) {
     respond(client, 200, "application/json", "{\"ok\":true,\"action\":\"dfu\"}");
 }
 
+void WebConfigServer::handleApiSystemUpdate(TCPClient& client) {
+    pushCommand(CommandType::ArmUpdate, 0, CommandSource::Web);
+    respond(client, 200, "application/json",
+            "{\"ok\":true,\"action\":\"update\",\"port\":3232,\"window_s\":60}");
+}
+
 bool WebConfigServer::pushCommand(CommandType type, int value, CommandSource source) {
     if (sink_ == nullptr) {
         return false;

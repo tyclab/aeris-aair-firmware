@@ -99,6 +99,21 @@ listening mode, which is the serial console the bootloader update below needs.
 Never hold past yellow to white; that is factory reset, and the factory image on
 an OEM unit is not ours. See `docs/hardware-components-and-interfaces.md` 6.4.
 
+### Over Wi-Fi
+
+Once a unit runs a build with the update listener, no cable is needed:
+
+```bash
+tools/ota.py 10.27.4.209 target/src.bin
+```
+
+`POST /api/v2/system/update` opens TCP 3232 for 60 s, and the tool sends the
+image by YMODEM to Device OS's own receiver, the one listening mode uses on
+USB. Device OS checks the module CRC and platform before the bootloader swaps
+it in, so a bad image is refused rather than booted. The application loop is
+blocked for the transfer, a few seconds; the fan keeps its PWM. Settings and
+the filter record are untouched, as with DFU.
+
 ### Browser flasher
 
 https://tyclab.github.io/aeris-aair-firmware/flasher/ &mdash; desktop Chrome,

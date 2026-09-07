@@ -55,5 +55,6 @@ private:
     void handleApiControlPost(TCPClient& client, const char* form_data);
     void handleApiSystemReboot(TCPClient& client);
     void handleApiSystemDfu(TCPClient& client);
+    void handleApiSystemUpdate(TCPClient& client);
     bool pushCommand(CommandType type, int value, CommandSource source);
 };
