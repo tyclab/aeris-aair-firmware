@@ -9,7 +9,7 @@
 #include "../drivers/button_driver.h"
 #include "../drivers/display_driver.h"
 #include "../drivers/fan_driver.h"
-#include "../drivers/ring_driver.h"
+#include "../drivers/key_light_driver.h"
 #include "../drivers/sensor_driver.h"
 #include "../net/mqtt_client.h"
 #include "../net/web_config_server.h"
@@ -39,10 +39,10 @@ private:
     FanDriver fan_;
     DisplayDriver display_;
     ButtonDriver buttons_;
-    RingDriver ring_;
+    KeyLightDriver key_lights_;
     SensorDriver sensor_;
 
-    Timer ring_timer_;
+    Timer key_light_timer_;
 
     WifiManager wifi_;
     MqttClient mqtt_;
@@ -57,7 +57,7 @@ private:
     uint8_t q_tail_;
 
     void tickSerialProvision();
-    void ringTimerTick();
+    void keyLightTimerTick();
     void loadFilterState();
     void saveFilterState();
     void tickFilter(uint32_t now_ms);

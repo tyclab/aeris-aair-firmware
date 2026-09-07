@@ -1,6 +1,6 @@
-#include "ring_driver.h"
+#include "key_light_driver.h"
 
-RingDriver::RingDriver(int data_pin, int clock_pin, int latch_pin, int handshake_pin)
+KeyLightDriver::KeyLightDriver(int data_pin, int clock_pin, int latch_pin, int handshake_pin)
     : data_pin_(data_pin),
       clock_pin_(clock_pin),
       latch_pin_(latch_pin),
@@ -11,7 +11,7 @@ RingDriver::RingDriver(int data_pin, int clock_pin, int latch_pin, int handshake
       phase_(0),
       last_written_(0xff) {}
 
-void RingDriver::init() {
+void KeyLightDriver::init() {
     // Stock boot handshake on A4 (high-low-high pulse, then released) before
     // the register pins come up; without it the aux circuitry may stay dark
     // or ignore the first latch.
@@ -31,19 +31,19 @@ void RingDriver::init() {
     writeRegister(0);
 }
 
-void RingDriver::set_pattern(uint8_t pattern) {
+void KeyLightDriver::set_pattern(uint8_t pattern) {
     pattern_ = pattern;
 }
 
-void RingDriver::set_brightness(uint8_t level) {
+void KeyLightDriver::set_brightness(uint8_t level) {
     brightness_ = (level > 4) ? 4 : level;
 }
 
-void RingDriver::set_blink_ms(uint16_t half_period_ms) {
+void KeyLightDriver::set_blink_ms(uint16_t half_period_ms) {
     blink_ms_ = half_period_ms;
 }
 
-void RingDriver::tick() {
+void KeyLightDriver::tick() {
     bool visible = true;
     uint16_t blink = blink_ms_;
     if (blink != 0) {
@@ -56,21 +56,21 @@ void RingDriver::tick() {
     }
 }
 
-void RingDriver::writeRegister(uint8_t value) {
+void KeyLightDriver::writeRegister(uint8_t value) {
     last_written_ = value;
     digitalWrite(latch_pin_, LOW);
     shiftOut(data_pin_, clock_pin_, LSBFIRST, value);
     digitalWrite(latch_pin_, HIGH);
 }
 
-uint8_t RingDriver::pattern() const {
+uint8_t KeyLightDriver::pattern() const {
     return pattern_;
 }
 
-uint8_t RingDriver::brightness() const {
+uint8_t KeyLightDriver::brightness() const {
     return brightness_;
 }
 
-uint16_t RingDriver::blink_ms() const {
+uint16_t KeyLightDriver::blink_ms() const {
     return blink_ms_;
 }

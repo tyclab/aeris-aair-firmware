@@ -28,11 +28,13 @@ const uint32_t kHealthPublishIntervalMs = 30000;
 const uint32_t kStatePublishMinIntervalMs = 400;
 const uint32_t kDisplayReinitDelayMs = 2500;
 
-// Filter countdown, stock semantics: wall-clock, decremented and persisted
-// hourly. Lives in emulated EEPROM behind the settings block.
+// Filter countdown, stock semantics: wall-clock. Decremented and persisted
+// every 10 min so a restart forfeits at most that much; the emulated EEPROM
+// behind the settings block absorbs the write rate for decades.
 const int kEepromAddrFilter = 512;
 const uint32_t kFilterMagic = 0x46494C54UL;  // 'FILT'
-const uint32_t kFilterTickMs = 60UL * 60UL * 1000UL;
+const uint32_t kFilterTickMinutes = 10;
+const uint32_t kFilterTickMs = kFilterTickMinutes * 60UL * 1000UL;
 
 struct FilterRecord {
     uint32_t magic;
@@ -44,9 +46,9 @@ AppController::AppController()
     : fan_(PIN_FAN),
       display_(TFT_CS, TFT_DC, TFT_RST, PIN_DISP_BL),
       buttons_(BTN_UP, BTN_DOWN, BTN_EXTRA, BTN_POWER),
-      ring_(PIN_RING_DATA, PIN_RING_CLK, PIN_RING_LATCH, PIN_RING_HANDSHAKE),
+      key_lights_(PIN_RING_DATA, PIN_RING_CLK, PIN_RING_LATCH, PIN_RING_HANDSHAKE),
       sensor_(PIN_SENSOR_TX),
-      ring_timer_(1, &AppController::ringTimerTick, *this),
+      key_light_timer_(1, &AppController::keyLightTimerTick, *this),
       web_(80),
       q_head_(0),
       q_tail_(0),
@@ -71,8 +73,8 @@ void AppController::init() {
     RGB.control(true);
     // Bring the ring register up deterministically before TFT init; unclocked
     // it free-runs with random power-up contents (constant white glow).
-    ring_.init();
-    ring_timer_.start();
+    key_lights_.init();
+    key_light_timer_.start();
 
     initDeviceState(state_, millis());
     settings_store_.loadOrInitialize(settings_);
@@ -290,8 +292,8 @@ void AppController::tickSerialProvision() {
     }
 }
 
-void AppController::ringTimerTick() {
-    ring_.tick();
+void AppController::keyLightTimerTick() {
+    key_lights_.tick();
 }
 
 void AppController::loadFilterState() {
@@ -313,7 +315,9 @@ void AppController::tickFilter(uint32_t now_ms) {
     if (state_.filter_minutes == 0) {
         return;
     }
-    state_.filter_minutes = (state_.filter_minutes > 60) ? state_.filter_minutes - 60 : 0;
+    state_.filter_minutes = (state_.filter_minutes > kFilterTickMinutes)
+                                ? state_.filter_minutes - kFilterTickMinutes
+                                : 0;
     saveFilterState();
     state_.dirty_publish = true;
 }
@@ -567,9 +571,9 @@ void AppController::applyOutputs() {
         force_apply_lights_ = false;
     }
 
-    ring_.set_pattern(state_.ring_pattern);
-    ring_.set_brightness(state_.ring_brightness);
-    ring_.set_blink_ms(state_.ring_blink_ms);
+    key_lights_.set_pattern(state_.ring_pattern);
+    key_lights_.set_brightness(state_.ring_brightness);
+    key_lights_.set_blink_ms(state_.ring_blink_ms);
 
     if (!setup_mode_ && state_.status_led_on != last_applied_status_led_) {
         RGB.color(state_.status_led_on ? 255 : 0, state_.status_led_on ? 100 : 0, 0);

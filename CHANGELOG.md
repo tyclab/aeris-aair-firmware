@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - `/api/v2/state` reports `firmware_version` and `firmware_build`, so two units running
   different unreleased work can be told apart without consulting a flashing log.
+- The filter countdown decrements and persists every 10 min instead of hourly, so a
+  restart forfeits at most 10 min of filter life.
+- The shift-register driver is `KeyLightDriver`: it drives the four key lights, the ring
+  glow is bleed. MQTT topics and state fields keep the `ring` name.
 
 ### Provisioning
 
