@@ -8,7 +8,7 @@ Root: `aeris/v2/<device_id>`
 - `aeris/v2/<device_id>/cmd/lights` payload `0|1`
 - `aeris/v2/<device_id>/cmd/screen_light` payload `0|1` (A1 TFT backlight)
 - `aeris/v2/<device_id>/cmd/ring` payload `0..255` key-light pattern byte (`0x03` power, `0x0C` AirQ, `0x30` down, `0xC0` up)
-- `aeris/v2/<device_id>/cmd/ring_brightness` payload `0..100` percent, quantised to 5 duty levels; `state/ring_brightness` reports the level `0..4`
+- `aeris/v2/<device_id>/cmd/ring_brightness` payload `0..100` percent, quantised to 5 duty levels; `state/ring_brightness` reports the quantised percent (`0`, `25`, `50`, `75` or `100`)
 - `aeris/v2/<device_id>/cmd/ring_blink` payload half period in ms, `0` = solid
 - `aeris/v2/<device_id>/cmd/status_led` payload `0|1`
 - `aeris/v2/<device_id>/cmd/filter_days` payload days of filter life remaining
