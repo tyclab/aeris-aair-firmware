@@ -49,7 +49,7 @@ Base path on device local IP:
 - `POST /api/v2/control` with urlencoded form sends runtime commands (`fan_percent`, `lights`, `screen_light`).
 - `POST /api/v2/system/reboot` requests reboot.
 - `POST /api/v2/system/dfu` requests DFU mode.
-- `POST /api/v2/system/update` opens a YMODEM listener on TCP 3232 for 60 s; `tools/ota.py` sends the application image through it and the unit reboots into it once Device OS has verified the module.
+- `POST /api/v2/system/update` opens TCP 3232 for 60 s. The unit sends `nonce=<32 hex>`; the client answers `<cnonce 32 hex> <sha256(mqtt_pass + nonce + cnonce) hex>` and gets `ok` or `denied`. After `ok` the socket is Device OS's YMODEM receiver; `tools/ota.py` does all of it and the unit reboots into the verified image.
 
 Validation failures return HTTP 400 with JSON body.
 

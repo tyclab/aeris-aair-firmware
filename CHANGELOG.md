@@ -13,9 +13,11 @@ All notable changes to this project are documented in this file.
 - The shift-register driver is `KeyLightDriver`: it drives the four key lights, the ring
   glow is bleed. MQTT topics and state fields keep the `ring` name.
 
-- Application updates over Wi-Fi: `POST /api/v2/system/update` opens a YMODEM listener
-  on TCP 3232 for 60 s and `tools/ota.py` sends the image through it. Device OS's own
-  receiver and verification do the work, so nothing new writes flash.
+- Application updates over Wi-Fi: `POST /api/v2/system/update` opens TCP 3232 for 60 s,
+  the unit challenges with a nonce and accepts `sha256(mqtt_pass + nonce + cnonce)`
+  (ESPHome-style, the password never on the wire), then `tools/ota.py` sends the image
+  by YMODEM. Device OS's own receiver and verification do the work, so nothing new
+  writes flash.
 
 ### Provisioning
 

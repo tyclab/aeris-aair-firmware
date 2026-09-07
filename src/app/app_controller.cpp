@@ -50,7 +50,7 @@ AppController::AppController()
       sensor_(PIN_SENSOR_TX),
       key_light_timer_(1, &AppController::keyLightTimerTick, *this),
       web_(80),
-      ota_(3232),
+      ota_(3232, &settings_),
       q_head_(0),
       q_tail_(0),
       setup_mode_(false),

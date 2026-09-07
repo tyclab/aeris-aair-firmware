@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Flash the application over Wi-Fi: arm the unit, then send the image by YMODEM.
+"""Flash the application over Wi-Fi: arm the unit, answer its challenge, send the image.
 
 Usage:
-  ota.py <host> <target/src.bin> [port]
+  MQTT_PASS=... ota.py <host> <target/src.bin> [port]
 
-POST /api/v2/system/update opens a 60 s listener; the unit's own Device OS YMODEM
-receiver takes the file, verifies it and reboots into it.
+POST /api/v2/system/update opens a 60 s listener. The unit sends a nonce; the
+reply is sha256(MQTT_PASS + nonce + cnonce), ESPHome style, so the password
+never crosses the wire. Then Device OS's own YMODEM receiver takes the file,
+verifies it and reboots into it.
 """
-import json, os, socket, sys, time, urllib.request
+import hashlib, json, os, secrets, socket, sys, time, urllib.request
 
 SOH, STX, EOT, ACK, NAK, CA, CRC = b"\x01", b"\x02", b"\x04", b"\x06", b"\x15", b"\x18", b"C"
 
@@ -16,6 +18,7 @@ if len(sys.argv) < 3:
 host, path = sys.argv[1:3]
 port = int(sys.argv[3]) if len(sys.argv) > 3 else 3232
 image = open(path, "rb").read()
+password = os.environ.get("MQTT_PASS") or sys.exit("MQTT_PASS missing in the environment")
 
 
 def crc16(data):
@@ -29,6 +32,17 @@ def crc16(data):
 
 def packet(header, seq, data):
     return header + bytes([seq & 0xFF, (~seq) & 0xFF]) + data + crc16(data)
+
+
+def read_line(sock, timeout):
+    sock.settimeout(timeout)
+    line = b""
+    while not line.endswith(b"\n"):
+        c = sock.recv(1)
+        if not c:
+            sys.exit("unit closed the connection\n" + line.decode(errors="replace"))
+        line += c
+    return line.strip().decode()
 
 
 def wait_for(sock, wanted, timeout):
@@ -57,6 +71,15 @@ for _ in range(20):
         time.sleep(0.5)
 if sock is None:
     sys.exit(f"{host}:{port} never opened")
+
+challenge = read_line(sock, 5)
+if not challenge.startswith("nonce="):
+    sys.exit(f"unexpected greeting: {challenge}")
+cnonce = secrets.token_hex(16)
+answer = hashlib.sha256((password + challenge[6:] + cnonce).encode()).hexdigest()
+sock.sendall(f"{cnonce} {answer}\n".encode())
+if read_line(sock, 5) != "ok":
+    sys.exit("unit denied the update: wrong MQTT_PASS")
 
 wait_for(sock, CRC, 15)
 name = os.path.basename(path).encode() + b"\0" + str(len(image)).encode() + b" "
