@@ -1,0 +1,40 @@
+name: Firmware
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+      - name: Check out Device OS 2.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: particle-iot/device-os
+          ref: 5aa7c8e1c7282b7c52040b77811186925d0febdc # v2.3.1
+          submodules: recursive
+          path: device-os
+      - name: Set up Arm GCC 9.3.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libarchive-zip-perl xxd
+          archive="$RUNNER_TEMP/gcc-arm-none-eabi.tar.bz2"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+          printf '%s  %s\n' 5adc2ee03904571c2de79d5cfc0f7fe2a5c5f54f44da5b645c17ee57b217f11f "$archive" | sha256sum --check
+          tar -xjf "$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gcc-arm-none-eabi-9-2020-q2-update/bin" >> "$GITHUB_PATH"
+      - name: Compile Photon application
+        run: |
+          arm-none-eabi-gcc --version
+          make DEVICE_OS="$GITHUB_WORKSPACE/device-os"
+          test -s target/aeris-aair-firmware.bin
