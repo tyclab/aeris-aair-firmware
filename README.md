@@ -81,6 +81,11 @@ Needs `gcc-arm-none-eabi` 9.x on `PATH`. The Particle libraries are pinned as
 submodules under `lib/` (Adafruit_ST7735_RK 1.10.4 with GFX and BusIO, MQTT
 0.4.32), so clone with `--recurse-submodules`.
 
+The `Firmware` workflow compiles the Photon application on every pull request
+and push to `main`, using the pinned Device OS 2.3.1 commit and the checksum-verified
+Arm GCC 9.3.1 toolchain. It requires a nonempty application binary. The Pages
+deployment remains separate; neither workflow flashes a device.
+
 ## Flash
 
 ```bash
