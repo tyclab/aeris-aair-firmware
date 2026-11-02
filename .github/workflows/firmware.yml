@@ -36,5 +36,5 @@ jobs:
       - name: Compile Photon application
         run: |
           arm-none-eabi-gcc --version
-          make -j2 DEVICE_OS="$GITHUB_WORKSPACE/device-os"
-          test -s target/src.bin
+          make DEVICE_OS="$GITHUB_WORKSPACE/device-os"
+          test -s target/aeris-aair-firmware.bin
